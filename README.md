@@ -6,7 +6,7 @@ Only metadata moves through the pipeline: file listings, `participants.tsv`, `*_
 
 ## OpenNeuro audit
 
-[**How clean is OpenNeuro's metadata?**](docs/index.html) runs neurolake over a reproducible random sample of 150 OpenNeuro datasets (6,587 subjects, 57,382 data files, 5.6 TB described):
+[**How clean is OpenNeuro's metadata?**](https://pearlfranz20.github.io/neurolake/) ([source](docs/index.html)) runs neurolake over a reproducible random sample of 150 OpenNeuro datasets (6,587 subjects, 57,382 data files, 5.6 TB described):
 
 - 51% of raw datasets pass every rule. 7% have an error that breaks BIDS.
 - Participant bookkeeping is the weak spot: 19% have no `participants.tsv`, and some tables disagree with the data folders on ID format (`sub-1` against `sub-001`, or no `sub-` prefix at all).
