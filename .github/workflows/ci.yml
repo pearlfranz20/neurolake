@@ -1,0 +1,48 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: ruff check . && ruff format --check .
+      - name: Unit, mocked-API and end-to-end tests (includes dbt build on fixtures)
+        run: pytest -q
+      - name: Demo run and report
+        run: neurolake demo
+      - uses: actions/upload-artifact@v4
+        if: matrix.python == '3.13'
+        with:
+          name: qc-report
+          path: data/report.html
+
+  dag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e . "apache-airflow>=3.0,<4"
+      - name: DAG imports cleanly
+        env:
+          AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+        run: |
+          python - <<'PY'
+          from airflow.dag_processing.dagbag import DagBag
+          bag = DagBag(dag_folder="dags")
+          assert not bag.import_errors, bag.import_errors
+          assert "neurolake_openneuro" in bag.dags
+          PY

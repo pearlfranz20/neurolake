@@ -1,0 +1,16 @@
+rule_id,default_severity,description
+subject_missing_from_participants,warning,A subject has data files but no row in participants.tsv
+participant_without_data,warning,A participants.tsv row has no data files in the snapshot
+missing_participants_tsv,warning,The dataset has subjects but no participants.tsv
+inconsistent_repetition_time,warning,BOLD runs of the same task use different RepetitionTime values
+inconsistent_sampling_frequency,warning,EEG/MEG/iEEG recordings of the same task use different SamplingFrequency values
+missing_required_sidecar_field,error,A field BIDS requires (or recommends) for the datatype is not set by any applicable sidecar
+fieldmap_intended_for_missing_target,error,A fieldmap IntendedFor entry points at a file that does not exist
+ambiguous_sidecar_inheritance,warning,More than one sidecar applies to a data file at the same folder level
+invalid_json,error,A JSON metadata file cannot be parsed
+metadata_read_error,error,A metadata file is listed but its content could not be read (bad encoding or missing content)
+malformed_tsv_row,error,A TSV row has a different number of columns than its header
+dataset_description_missing,error,dataset_description.json is missing
+dataset_description_missing_field,error,dataset_description.json lacks Name or BIDSVersion
+scans_tsv_missing_file,warning,A scans.tsv row references a file that does not exist
+data_file_size_unknown,info,A data file has no recorded size (often unfetched git-annex content)

@@ -1,0 +1,80 @@
+version: 2
+
+models:
+  - name: dim_dataset
+    description: One row per dataset at its current snapshot.
+    columns:
+      - name: dataset_id
+        tests: [unique, not_null]
+
+  - name: dim_subject
+    description: >
+      Every subject that appears in participants.tsv or in the data. The two flags
+      make mismatches between them queryable rather than silently dropped.
+    columns:
+      - name: subject_id
+        tests: [unique, not_null]
+      - name: dataset_id
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_dataset')
+                field: dataset_id
+
+  - name: fct_scan
+    description: One row per primary data file, with inherited acquisition metadata resolved.
+    columns:
+      - name: data_file_id
+        tests: [unique, not_null]
+      - name: subject_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_subject')
+                field: subject_id
+      - name: repetition_time_s
+        tests:
+          - value_in_range:
+              arguments:
+                min_value: 0.05
+                max_value: 30
+      - name: sampling_frequency_hz
+        tests:
+          - value_in_range:
+              arguments:
+                min_value: 1
+                max_value: 100000
+
+  - name: fct_dq_issue
+    description: Data-quality findings, one row per issue. Rules are described in the dq_rules seed.
+    columns:
+      - name: issue_id
+        tests: [unique, not_null]
+      - name: severity
+        tests:
+          - accepted_values:
+              arguments:
+                values: [error, warning, info]
+      - name: rule_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dq_rules')
+                field: rule_id
+
+  - name: mart_dataset_quality
+    description: Dataset-level size, coverage and readiness score.
+    columns:
+      - name: dataset_id
+        tests: [unique, not_null]
+      - name: clean_scan_pct
+        tests:
+          - value_in_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+
+  - name: mart_acquisition_summary
+    description: Acquisition parameters per dataset, datatype and task.

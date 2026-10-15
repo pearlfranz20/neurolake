@@ -1,0 +1,14 @@
+extension,modality_family
+.nii,mri
+.nii.gz,mri
+.edf,eeg
+.bdf,eeg
+.set,eeg
+.vhdr,eeg
+.fif,meg
+.con,meg
+.sqd,meg
+.snirf,nirs
+.nwb,ieeg
+.mefd,ieeg
+.ds,meg

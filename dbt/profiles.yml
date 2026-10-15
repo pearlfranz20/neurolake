@@ -1,0 +1,7 @@
+neurolake:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('NEUROLAKE_LAKE', '../data/lake') }}/neurolake.duckdb"
+      threads: 4

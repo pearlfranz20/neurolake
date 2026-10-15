@@ -1,0 +1,23 @@
+version: 2
+
+sources:
+  - name: bronze
+    description: >-
+      Raw Parquet landed by `neurolake ingest`, hive-partitioned by dataset_id and snapshot.
+      Every row carries the run_id that wrote it; staging keeps only the current run.
+    meta:
+      external_location: >-
+        read_parquet('{{ env_var("NEUROLAKE_LAKE", "../data/lake") }}/bronze/{name}/*/*/data.parquet',
+        hive_partitioning = true,
+        hive_types_autocast = false)
+    tables:
+      - name: raw_files
+        description: Every file in a snapshot, with its size. Imaging payloads are listed, never downloaded.
+      - name: raw_json_docs
+        description: Raw text of every JSON metadata file. `read_error` is set when the fetch failed.
+      - name: raw_tsv_rows
+        description: participants, sessions and scans TSV rows serialised as JSON objects.
+      - name: raw_read_errors
+        description: Metadata files whose content could not be read (bad encoding, missing content).
+      - name: raw_ingest_runs
+        description: One row per ingest run of a dataset snapshot.

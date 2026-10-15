@@ -1,0 +1,198 @@
+"""Generate small synthetic BIDS datasets with known, deliberate defects.
+
+The fixtures mirror the shape of real OpenNeuro datasets (inheritance-principle
+sidecars, scans/participants TSVs, fieldmaps, EEG) but use tiny placeholder files,
+so the whole pipeline and its data-quality rules can be tested offline. Every
+injected defect is listed in EXPECTED_ISSUES so tests can assert they are caught.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+# (dataset_id, rule_id, subject_or_object) for every defect injected below.
+EXPECTED_ISSUES = {
+    ("ds900001", "subject_missing_from_participants", "sub-05"),
+    ("ds900001", "participant_without_data", "sub-07"),
+    ("ds900001", "inconsistent_repetition_time", "task-nback"),
+    ("ds900001", "fieldmap_intended_for_missing_target", "sub-02"),
+    ("ds900002", "missing_required_sidecar_field", "sub-04"),
+    ("ds900002", "inconsistent_sampling_frequency", "task-oddball"),
+    ("ds900003", "invalid_json", "sub-01/anat/sub-01_T1w.json"),
+    ("ds900003", "malformed_tsv_row", "participants.tsv"),
+    ("ds900003", "dataset_description_missing_field", "BIDSVersion"),
+    ("ds900003", "ambiguous_sidecar_inheritance", "sub-01/anat/sub-01_T1w.nii.gz"),
+    ("ds900003", "metadata_read_error", "sub-02/sub-02_scans.tsv"),
+}
+
+
+def _write(path: Path, content: str | bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if isinstance(content, bytes):
+        path.write_bytes(content)
+    else:
+        path.write_text(content, encoding="utf-8")
+
+
+def _json(path: Path, obj: dict) -> None:
+    _write(path, json.dumps(obj, indent=2))
+
+
+def _tsv(path: Path, header: list[str], rows: list[list[str]]) -> None:
+    lines = ["\t".join(header)] + ["\t".join(r) for r in rows]
+    _write(path, "\n".join(lines) + "\n")
+
+
+def _blob(path: Path, n: int) -> None:
+    _write(path, b"\0" * n)
+
+
+def _fmri(root: Path) -> None:
+    _json(
+        root / "dataset_description.json",
+        {
+            "Name": "Synthetic resting state and n-back fMRI",
+            "BIDSVersion": "1.9.0",
+            "License": "CC0",
+            "Authors": ["A. Researcher", "B. Researcher"],
+            "DatasetType": "raw",
+        },
+    )
+    # sub-05 has data but is missing here; sub-07 is listed but has no data.
+    # Sex is coded inconsistently on purpose; the model normalises it.
+    _tsv(
+        root / "participants.tsv",
+        ["participant_id", "age", "sex", "handedness", "group"],
+        [
+            ["sub-01", "24", "M", "right", "control"],
+            ["sub-02", "31", "F", "right", "patient"],
+            ["sub-03", "n/a", "male", "left", "control"],
+            ["sub-04", "27", "female", "R", "patient"],
+            ["sub-06", "45", "f", "right", "control"],
+            ["sub-07", "38", "M", "right", "patient"],
+        ],
+    )
+    # Inheritance principle: top-level sidecars apply to every matching file.
+    _json(root / "task-rest_bold.json", {"TaskName": "rest", "RepetitionTime": 2.0})
+    _json(root / "task-nback_bold.json", {"TaskName": "nback", "RepetitionTime": 2.0})
+    _json(
+        root / "T1w.json",
+        {"Manufacturer": "Siemens", "MagneticFieldStrength": 3, "EchoTime": 0.00298},
+    )
+
+    for i in range(1, 7):
+        sub = f"sub-{i:02d}"
+        _blob(root / sub / "anat" / f"{sub}_T1w.nii.gz", 2048 + i)
+        _blob(root / sub / "func" / f"{sub}_task-rest_bold.nii.gz", 8192 + i)
+        scans = [[f"anat/{sub}_T1w.nii.gz", f"2024-03-0{i}T09:00:00"]]
+        scans.append([f"func/{sub}_task-rest_bold.nii.gz", f"2024-03-0{i}T09:10:00"])
+        for run in (1, 2):
+            name = f"{sub}_task-nback_run-{run}_bold.nii.gz"
+            _blob(root / sub / "func" / name, 6144 + i)
+            scans.append([f"func/{name}", f"2024-03-0{i}T09:2{run}:00"])
+        _tsv(root / sub / f"{sub}_scans.tsv", ["filename", "acq_time"], scans)
+
+        # Diffusion for even subjects only, with a subject-level sidecar.
+        if i % 2 == 0:
+            _blob(root / sub / "dwi" / f"{sub}_dwi.nii.gz", 12288)
+            _write(root / sub / "dwi" / f"{sub}_dwi.bval", "0 1000 1000\n")
+            _write(root / sub / "dwi" / f"{sub}_dwi.bvec", "0 1 0\n0 0 1\n0 0 0\n")
+            _json(
+                root / sub / "dwi" / f"{sub}_dwi.json",
+                {"PhaseEncodingDirection": "j-", "EchoTime": 0.089},
+            )
+
+        # Fieldmaps: sub-02 points at a run that does not exist.
+        if i in (1, 2):
+            _blob(root / sub / "fmap" / f"{sub}_phasediff.nii.gz", 1024)
+            run = "" if i == 1 else "_run-9"
+            target = f"func/{sub}_task-rest{run}_bold.nii.gz"
+            _json(
+                root / sub / "fmap" / f"{sub}_phasediff.json",
+                {"EchoTime1": 0.00492, "EchoTime2": 0.00738, "IntendedFor": [f"bids::{sub}/{target}"]},
+            )
+
+    # sub-03 run-2 overrides the inherited TR (a classic acquisition mismatch).
+    _json(
+        root / "sub-03" / "func" / "sub-03_task-nback_run-2_bold.json",
+        {"RepetitionTime": 1.5},
+    )
+
+    # MP2RAGE: two inversions whose sidecars differ only by the inv- entity. Each
+    # volume must inherit its own InversionTime, never the other one's.
+    for inv, ti in ((1, 0.8), (2, 2.7)):
+        stem = f"sub-06_inv-{inv}_MP2RAGE"
+        _blob(root / "sub-06" / "anat" / f"{stem}.nii.gz", 4096)
+        _json(root / "sub-06" / "anat" / f"{stem}.json", {"InversionTime": ti, "MagneticFieldStrength": 7})
+
+
+def _eeg(root: Path) -> None:
+    _json(
+        root / "dataset_description.json",
+        {"Name": "Synthetic auditory oddball EEG", "BIDSVersion": "1.8.0", "License": "CC-BY-4.0"},
+    )
+    _tsv(
+        root / "participants.tsv",
+        ["participant_id", "age", "sex"],
+        [["sub-01", "22", "F"], ["sub-02", "29", "M"], ["sub-03", "35", "F"], ["sub-04", "41", "M"]],
+    )
+    for i in range(1, 5):
+        sub = f"sub-{i:02d}"
+        _blob(root / sub / "eeg" / f"{sub}_task-oddball_eeg.edf", 4096)
+        _tsv(
+            root / sub / "eeg" / f"{sub}_task-oddball_events.tsv",
+            ["onset", "duration", "trial_type"],
+            [["1.0", "0.1", "standard"], ["2.5", "0.1", "deviant"]],
+        )
+        # No top-level eeg sidecar, so sub-04 ends up with no SamplingFrequency.
+        if i == 4:
+            continue
+        _json(
+            root / sub / "eeg" / f"{sub}_task-oddball_eeg.json",
+            {
+                "TaskName": "oddball",
+                "SamplingFrequency": 256 if i == 3 else 512,
+                "PowerLineFrequency": 60,
+                "EEGReference": "Cz",
+                "SoftwareFilters": "n/a",
+            },
+        )
+
+    # CTF MEG stores a recording as a folder; it must count as one data file.
+    ds = root / "sub-01" / "meg" / "sub-01_task-oddball_meg.ds"
+    _blob(ds / "sub-01_task-oddball_meg.meg4", 30000)
+    _blob(ds / "sub-01_task-oddball_meg.res4", 2000)
+    _json(
+        root / "sub-01" / "meg" / "sub-01_task-oddball_meg.json",
+        {"TaskName": "oddball", "SamplingFrequency": 1200, "PowerLineFrequency": 60},
+    )
+
+
+def _broken(root: Path) -> None:
+    # Missing BIDSVersion, malformed participants row, unparseable sidecar, two
+    # sidecars at the same level for sub-01, and a scans file that is not UTF-8.
+    _json(root / "dataset_description.json", {"Name": "Synthetic dataset with structural defects"})
+    _write(
+        root / "participants.tsv",
+        "participant_id\tage\tsex\nsub-01\t30\tF\nsub-02\t33\n",
+    )
+    for i in (1, 2):
+        sub = f"sub-{i:02d}"
+        _blob(root / sub / "anat" / f"{sub}_T1w.nii.gz", 2048)
+    _write(root / "sub-01" / "anat" / "sub-01_T1w.json", '{"Manufacturer": "GE", ')
+    _json(root / "sub-02" / "anat" / "sub-02_T1w.json", {"Manufacturer": "GE"})
+    _json(root / "T1w.json", {"MagneticFieldStrength": 3})
+    _json(root / "sub-01_T1w.json", {"MagneticFieldStrength": 1.5})
+    _write(root / "sub-02" / "sub-02_scans.tsv", b"filename\tacq_time\nanat/sub-02_T1w.nii.gz\t\xff\xfe\n")
+
+
+def generate(out_dir: str | Path) -> list[Path]:
+    """Write the three fixture datasets under out_dir and return their roots."""
+    out = Path(out_dir)
+    roots = []
+    for dataset_id, builder in (("ds900001", _fmri), ("ds900002", _eeg), ("ds900003", _broken)):
+        root = out / dataset_id
+        builder(root)
+        roots.append(root)
+    return roots

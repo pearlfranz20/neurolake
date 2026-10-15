@@ -1,0 +1,85 @@
+version: 2
+
+models:
+  - name: int_data_files
+    description: Primary data files (imaging volumes and electrophysiology recordings).
+    columns:
+      - name: data_file_id
+        tests: [unique, not_null]
+
+  - name: int_effective_sidecars
+    description: >
+      Metadata for each data file after applying the BIDS inheritance principle.
+      Sidecars are merged with json_merge_patch from the dataset root down, so the
+      closest and most specific sidecar wins on conflicting keys.
+    columns:
+      - name: data_file_id
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_data_files')
+                field: data_file_id
+
+  - name: int_fieldmap_targets
+    description: One row per fieldmap IntendedFor entry, resolved and checked.
+
+unit_tests:
+  - name: closest_sidecar_wins
+    description: >
+      A run-level sidecar overrides an inherited top-level value and keys merge.
+      Sidecars for another task, or with an entity the file lacks (desc-), never apply.
+    model: int_effective_sidecars
+    given:
+      - input: ref('int_data_files')
+        format: sql
+        rows: |
+          select 'ds1:f' as data_file_id, 'ds1' as dataset_id,
+                 'sub-01/func/sub-01_task-x_run-2_bold.nii.gz' as path, 'sub-01/func/' as directory,
+                 '01' as subject_label, null::varchar as session_label, 'bold' as suffix,
+                 ['sub-01', 'task-x', 'run-2'] as entities
+      - input: ref('stg_json_docs')
+        format: sql
+        rows: |
+          select 'ds1' as dataset_id, 'task-x_bold.json' as path, '' as directory, 0 as depth,
+                 null::varchar as subject_label, null::varchar as session_label, 'bold' as suffix,
+                 '.json' as extension, ['task-x'] as entities, true as is_valid_json,
+                 '{"RepetitionTime": 2.0, "TaskName": "x"}'::json as doc
+          union all
+          select 'ds1', 'sub-01/func/sub-01_task-x_run-2_bold.json', 'sub-01/func/', 2,
+                 '01', null, 'bold', '.json', ['sub-01', 'task-x', 'run-2'], true,
+                 '{"RepetitionTime": 1.5}'::json
+          union all
+          select 'ds1', 'sub-01/func/sub-01_task-y_bold.json', 'sub-01/func/', 2,
+                 '01', null, 'bold', '.json', ['sub-01', 'task-y'], true,
+                 '{"RepetitionTime": 9.9}'::json
+          union all
+          select 'ds1', 'sub-01/func/sub-01_task-x_desc-other_bold.json', 'sub-01/func/', 2,
+                 '01', null, 'bold', '.json', ['sub-01', 'task-x', 'desc-other'], true,
+                 '{"RepetitionTime": 7.7}'::json
+    expect:
+      rows:
+        - {data_file_id: "ds1:f", n_sidecars: 2, has_ambiguous_level: false, effective_sidecar: '{"TaskName":"x","RepetitionTime":1.5}'}
+
+  - name: same_level_sidecars_are_ambiguous
+    model: int_effective_sidecars
+    given:
+      - input: ref('int_data_files')
+        format: sql
+        rows: |
+          select 'ds1:f' as data_file_id, 'ds1' as dataset_id, 'sub-01/anat/sub-01_T1w.nii.gz' as path,
+                 'sub-01/anat/' as directory, '01' as subject_label, null::varchar as session_label,
+                 'T1w' as suffix, ['sub-01'] as entities
+      - input: ref('stg_json_docs')
+        format: sql
+        rows: |
+          select 'ds1' as dataset_id, 'T1w.json' as path, '' as directory, 0 as depth,
+                 null::varchar as subject_label, null::varchar as session_label, 'T1w' as suffix,
+                 '.json' as extension, []::varchar[] as entities, true as is_valid_json,
+                 '{"A": 1}'::json as doc
+          union all
+          select 'ds1', 'sub-01_T1w.json', '', 0, null, null, 'T1w', '.json', ['sub-01'], true, '{"A": 2}'::json
+    expect:
+      rows:
+        - {data_file_id: "ds1:f", n_sidecars: 2, has_ambiguous_level: true}

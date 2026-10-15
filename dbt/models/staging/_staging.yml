@@ -1,0 +1,68 @@
+version: 2
+
+models:
+  - name: stg_ingest_runs
+    description: Ingest runs; `is_current` marks the latest snapshot per dataset.
+    columns:
+      - name: run_id
+        tests: [unique, not_null]
+
+  - name: stg_files
+    description: Every file in each current snapshot, with BIDS entities parsed from its path.
+    columns:
+      - name: path
+        tests: [not_null]
+      - name: extension
+        tests: [not_null]
+
+  - name: stg_json_docs
+    description: JSON metadata files, validated and parsed. Invalid files keep `doc` null.
+
+  - name: stg_read_errors
+    description: Metadata files of the current run whose content could not be read.
+
+  - name: stg_tsv_rows
+    columns:
+      - name: table_kind
+        tests:
+          - accepted_values:
+              arguments:
+                values: [participants, sessions, scans]
+
+  - name: stg_participants
+    columns:
+      - name: sex
+        tests:
+          - accepted_values:
+              arguments:
+                values: [M, F, O]
+      - name: handedness
+        tests:
+          - accepted_values:
+              arguments:
+                values: [R, L, A]
+
+unit_tests:
+  - name: parses_bids_entities_from_paths
+    description: Entities, datatype, suffix and multi-part extensions come out of a BIDS path.
+    model: stg_files
+    given:
+      - input: ref('stg_ingest_runs')
+        rows:
+          - {dataset_id: ds1, snapshot: "1.0.0", run_id: r1, is_current: true}
+      # bronze sources are external Parquet, so dbt cannot introspect their
+      # columns; the fixture is given as SQL instead.
+      - input: source('bronze', 'raw_files')
+        format: sql
+        rows: |
+          select 'ds1' as dataset_id, '1.0.0' as snapshot, 'r1' as run_id, 10::bigint as size_bytes,
+                 'sub-01/ses-pre/func/sub-01_ses-pre_task-rest_acq-mb4_run-2_bold.nii.gz' as path
+          union all select 'ds1', '1.0.0', 'r1', 1, 'task-rest_bold.json'
+          union all select 'ds1', '1.0.0', 'r1', 5, 'sub-02/eeg/sub-02_task-oddball_eeg.edf'
+          -- a row from an older run of the same snapshot must be ignored
+          union all select 'ds1', '1.0.0', 'r0', 5, 'sub-09/anat/sub-09_T1w.nii.gz'
+    expect:
+      rows:
+        - {path: "sub-01/ses-pre/func/sub-01_ses-pre_task-rest_acq-mb4_run-2_bold.nii.gz", subject_label: "01", session_label: pre, datatype: func, task_label: rest, acq_label: mb4, run_label: "2", suffix: bold, extension: .nii.gz, depth: 3}
+        - {path: "task-rest_bold.json", subject_label: null, session_label: null, datatype: null, task_label: rest, acq_label: null, run_label: null, suffix: bold, extension: .json, depth: 0}
+        - {path: "sub-02/eeg/sub-02_task-oddball_eeg.edf", subject_label: "02", session_label: null, datatype: eeg, task_label: oddball, acq_label: null, run_label: null, suffix: eeg, extension: .edf, depth: 2}

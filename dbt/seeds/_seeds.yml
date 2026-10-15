@@ -1,0 +1,18 @@
+version: 2
+
+seeds:
+  - name: data_file_extensions
+    description: Extensions that mark a primary data file.
+  - name: required_sidecar_fields
+    description: Sidecar fields BIDS requires (error) or recommends (warning), per datatype and suffix.
+    columns:
+      - name: severity
+        tests:
+          - accepted_values:
+              arguments:
+                values: [error, warning]
+  - name: dq_rules
+    description: Catalogue of data-quality rules implemented in fct_dq_issue.
+    columns:
+      - name: rule_id
+        tests: [unique, not_null]
