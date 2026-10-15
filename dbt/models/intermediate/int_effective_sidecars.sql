@@ -69,18 +69,33 @@ merged as (
         bool_or(not is_valid_json) as has_invalid_sidecar
     from candidates
     group by data_file_id
+),
+
+final as (
+    select
+        f.data_file_id,
+        f.dataset_id,
+        f.path,
+        coalesce(m.effective_sidecar, '{}'::json) as effective_sidecar,
+        coalesce(m.sidecar_paths, []) as sidecar_paths,
+        coalesce(m.n_sidecars, 0) as n_sidecars,
+        coalesce(m.has_invalid_sidecar, false) as has_invalid_sidecar,
+        coalesce(m.has_ambiguous_level, false) as has_ambiguous_level,
+        u.data_file_id is not null as has_unfetched_sidecar
+    from data_files as f
+    left join merged as m using (data_file_id)
+    left join unfetched_hits as u using (data_file_id)
 )
 
+-- Parse each document once: every ->> re-parses the whole JSON, and some datasets
+-- carry sidecars of hundreds of KB (long timing arrays), so separate extractions
+-- multiply memory by the number of fields.
 select
-    f.data_file_id,
-    f.dataset_id,
-    f.path,
-    coalesce(m.effective_sidecar, '{}'::json) as effective_sidecar,
-    coalesce(m.sidecar_paths, []) as sidecar_paths,
-    coalesce(m.n_sidecars, 0) as n_sidecars,
-    coalesce(m.has_invalid_sidecar, false) as has_invalid_sidecar,
-    coalesce(m.has_ambiguous_level, false) as has_ambiguous_level,
-    u.data_file_id is not null as has_unfetched_sidecar
-from data_files as f
-left join merged as m using (data_file_id)
-left join unfetched_hits as u using (data_file_id)
+    *,
+    json_keys(effective_sidecar) as sidecar_keys,
+    json_extract_string(
+        effective_sidecar,
+        ['$.TaskName', '$.RepetitionTime', '$.EchoTime', '$.SamplingFrequency',
+         '$.Manufacturer', '$.MagneticFieldStrength']
+    ) as core_fields
+from final

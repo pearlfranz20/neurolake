@@ -55,12 +55,12 @@ unit_tests:
       - input: source('bronze', 'raw_files')
         format: sql
         rows: |
-          select 'ds1' as dataset_id, '1.0.0' as snapshot, 'r1' as run_id, 10::bigint as size_bytes,
+          select 'ds1' as dataset_id, '1.0.0' as snapshot, 'r1' as run_id, 10::bigint as size_bytes, false as is_bidsignored,
                  'sub-01/ses-pre/func/sub-01_ses-pre_task-rest_acq-mb4_run-2_bold.nii.gz' as path
-          union all select 'ds1', '1.0.0', 'r1', 1, 'task-rest_bold.json'
-          union all select 'ds1', '1.0.0', 'r1', 5, 'sub-02/eeg/sub-02_task-oddball_eeg.edf'
+          union all select 'ds1', '1.0.0', 'r1', 1, false, 'task-rest_bold.json'
+          union all select 'ds1', '1.0.0', 'r1', 5, false, 'sub-02/eeg/sub-02_task-oddball_eeg.edf'
           -- a row from an older run of the same snapshot must be ignored
-          union all select 'ds1', '1.0.0', 'r0', 5, 'sub-09/anat/sub-09_T1w.nii.gz'
+          union all select 'ds1', '1.0.0', 'r0', 5, false, 'sub-09/anat/sub-09_T1w.nii.gz'
     expect:
       rows:
         - {path: "sub-01/ses-pre/func/sub-01_ses-pre_task-rest_acq-mb4_run-2_bold.nii.gz", subject_label: "01", session_label: pre, datatype: func, task_label: rest, acq_label: mb4, run_label: "2", suffix: bold, extension: .nii.gz, depth: 3}

@@ -26,6 +26,7 @@ import fcntl
 import io
 import json
 import logging
+import re
 import shutil
 import uuid
 from collections.abc import Iterator
@@ -35,6 +36,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pathspec
 import pyarrow as pa
 import pyarrow.parquet as pq
 
@@ -44,7 +46,9 @@ log = logging.getLogger(__name__)
 
 _RUN = ("run_id", pa.string())
 _SCHEMAS = {
-    "raw_files": pa.schema([_RUN, ("path", pa.string()), ("size_bytes", pa.int64())]),
+    "raw_files": pa.schema(
+        [_RUN, ("path", pa.string()), ("size_bytes", pa.int64()), ("is_bidsignored", pa.bool_())]
+    ),
     "raw_json_docs": pa.schema([_RUN, ("path", pa.string()), ("content", pa.string())]),
     "raw_tsv_rows": pa.schema(
         [
@@ -66,6 +70,8 @@ _SCHEMAS = {
             ("started_at", pa.timestamp("us", tz="UTC")),
             ("finished_at", pa.timestamp("us", tz="UTC")),
             ("n_files", pa.int64()),
+            ("n_ignored_files", pa.int64()),
+            ("bidsignored_core_files", pa.list_(pa.string())),
             ("n_metadata_files", pa.int64()),
             ("n_read_errors", pa.int64()),
         ]
@@ -125,6 +131,25 @@ def _publish(staged: Path, part: Path, trash: Path) -> None:
     staged.rename(part)
 
 
+_CORE_FILES = re.compile(
+    r"^(dataset_description\.json|participants\.(tsv|json)|README(\.\w+)?|CHANGES|LICENSE|CITATION\.cff)$"
+)
+
+
+def _is_core_file(path: str) -> bool:
+    return bool(_CORE_FILES.match(path))
+
+
+def _bidsignore(source: DatasetSource) -> pathspec.GitIgnoreSpec | None:
+    """The dataset's .bidsignore (gitignore syntax), as the BIDS validator applies it."""
+    try:
+        text = source.read_text(".bidsignore")
+    except (MetadataReadError, FileNotFoundError):
+        return None
+    lines = [ln for ln in text.splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
+    return pathspec.GitIgnoreSpec.from_lines(lines) if lines else None
+
+
 def ingest(source: DatasetSource, lake: str | Path, max_workers: int = 8) -> IngestResult:
     """Land one snapshot. Content-level read problems (bad encoding, missing file) are
     recorded and surfaced as data-quality issues; anything else (network failures
@@ -135,7 +160,16 @@ def ingest(source: DatasetSource, lake: str | Path, max_workers: int = 8) -> Ing
     log.info("ingest %s:%s from %s", source.dataset_id, source.snapshot, source.source_name)
 
     files = list(source.list_files())
-    meta_paths = [f.path for f in files if is_metadata(f.path)]
+    # Files matched by .bidsignore are kept in the listing (they exist, which matters
+    # for references from scans.tsv) but are never read or checked.
+    ignore = _bidsignore(source)
+    matched = {f.path for f in files if ignore and ignore.match_file(f.path)}
+    # Core files are never ignored, even when a broad pattern (say **/*dat*) matches them.
+    core_hits = sorted(p for p in matched if _is_core_file(p))
+    ignored = matched - set(core_hits)
+    if ignored:
+        log.info("%s: %d files covered by .bidsignore", source.dataset_id, len(ignored))
+    meta_paths = [f.path for f in files if is_metadata(f.path) and f.path not in ignored]
 
     def fetch(path: str) -> tuple[str, str | None, MetadataReadError | None]:
         try:
@@ -166,7 +200,15 @@ def ingest(source: DatasetSource, lake: str | Path, max_workers: int = 8) -> Ing
                 )
 
     out = {
-        "raw_files": [{"run_id": run_id, "path": f.path, "size_bytes": f.size_bytes} for f in files],
+        "raw_files": [
+            {
+                "run_id": run_id,
+                "path": f.path,
+                "size_bytes": f.size_bytes,
+                "is_bidsignored": f.path in ignored,
+            }
+            for f in files
+        ],
         "raw_json_docs": json_rows,
         "raw_tsv_rows": tsv_rows,
         "raw_read_errors": error_rows,
@@ -178,6 +220,8 @@ def ingest(source: DatasetSource, lake: str | Path, max_workers: int = 8) -> Ing
                 "started_at": started,
                 "finished_at": datetime.now(timezone.utc),
                 "n_files": len(files),
+                "n_ignored_files": len(ignored),
+                "bidsignored_core_files": core_hits,
                 "n_metadata_files": len(meta_paths),
                 "n_read_errors": len(error_rows),
             }

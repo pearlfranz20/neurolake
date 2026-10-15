@@ -27,6 +27,8 @@ EXPECTED_ISSUES = {
     ("ds900003", "metadata_read_error", "sub-02/sub-02_scans.tsv"),
     ("ds900002", "metadata_not_fetched", "sub-01/eeg/sub-01_task-rest_eeg.json"),
     ("ds900004", "derivative_dataset", "ds900004"),
+    ("ds900005", "subject_folders_not_at_root", "study/"),
+    ("ds900003", "bidsignore_matches_core_files", ".bidsignore"),
 }
 
 # Real-world patterns that must NOT be reported (each was a false positive once).
@@ -37,6 +39,12 @@ MUST_NOT_FLAG = {
     ("ds900002", "missing_required_sidecar_field", "task-rest"),
     # MEGIN crosstalk calibration files have no task or sidecar
     ("ds900002", "missing_required_sidecar_field", "acq-crosstalk"),
+    # files listed in .bidsignore are outside the standard and never checked
+    ("ds900003", "invalid_json", "extra/notes.json"),
+    # a scans.tsv row pointing at a bidsignored file points at a file that exists
+    ("ds900003", "scans_tsv_missing_file", "acq-scout"),
+    # a scans.tsv row may point at a folder-format recording (CTF .ds)
+    ("ds900002", "scans_tsv_missing_file", "meg.ds"),
     # raw-data rules do not apply to derivative datasets
     ("ds900004", "fieldmap_intended_for_missing_target", ""),
 }
@@ -186,13 +194,25 @@ def _eeg(root: Path) -> None:
     # MEGIN crosstalk calibration: not a recording.
     _blob(root / "sub-02" / "meg" / "sub-02_acq-crosstalk_meg.fif", 1000)
 
+    _tsv(
+        root / "sub-01" / "sub-01_scans.tsv",
+        ["filename", "acq_time"],
+        [["meg/sub-01_task-oddball_meg.ds", "n/a"]],
+    )
+
     # CTF MEG stores a recording as a folder; it must count as one data file.
     ds = root / "sub-01" / "meg" / "sub-01_task-oddball_meg.ds"
     _blob(ds / "sub-01_task-oddball_meg.meg4", 30000)
     _blob(ds / "sub-01_task-oddball_meg.res4", 2000)
     _json(
         root / "sub-01" / "meg" / "sub-01_task-oddball_meg.json",
-        {"TaskName": "oddball", "SamplingFrequency": 1200, "PowerLineFrequency": 60},
+        {
+            "TaskName": "oddball",
+            "SamplingFrequency": 1200,
+            "PowerLineFrequency": 60,
+            "DewarPosition": "upright",
+            "SoftwareFilters": "n/a",
+        },
     )
 
 
@@ -209,6 +229,14 @@ def _broken(root: Path) -> None:
         _blob(root / sub / "anat" / f"{sub}_T1w.nii.gz", 2048)
     _write(root / "sub-01" / "anat" / "sub-01_T1w.json", '{"Manufacturer": "GE", ')
     _json(root / "sub-02" / "anat" / "sub-02_T1w.json", {"Manufacturer": "GE"})
+    _write(root / "extra" / "notes.json", "{not json")
+    _blob(root / "sub-01" / "anat" / "sub-01_acq-scout_T1w.nii.gz", 512)
+    _write(root / ".bidsignore", "# non-BIDS material\nextra/\n*acq-scout*\n**/*dat*\n")
+    _tsv(
+        root / "sub-01" / "sub-01_scans.tsv",
+        ["filename", "acq_time"],
+        [["anat/sub-01_acq-scout_T1w.nii.gz", "n/a"]],
+    )
     _json(root / "T1w.json", {"MagneticFieldStrength": 3})
     _json(root / "sub-01_T1w.json", {"MagneticFieldStrength": 1.5})
     _write(root / "sub-02" / "sub-02_scans.tsv", b"filename\tacq_time\nanat/sub-02_T1w.nii.gz\t\xff\xfe\n")
@@ -228,11 +256,24 @@ def _derivative(root: Path) -> None:
     )
 
 
+def _nested(root: Path) -> None:
+    # The whole dataset was uploaded one folder too deep.
+    _json(root / "dataset_description.json", {"Name": "Synthetic nested upload", "BIDSVersion": "1.9.0"})
+    _tsv(root / "participants.tsv", ["participant_id"], [["sub-01"]])
+    _blob(root / "study" / "sub-01" / "anat" / "sub-01_T1w.nii.gz", 2048)
+
+
 def generate(out_dir: str | Path) -> list[Path]:
     """Write the fixture datasets under out_dir and return their roots."""
     out = Path(out_dir)
     roots = []
-    builders = (("ds900001", _fmri), ("ds900002", _eeg), ("ds900003", _broken), ("ds900004", _derivative))
+    builders = (
+        ("ds900001", _fmri),
+        ("ds900002", _eeg),
+        ("ds900003", _broken),
+        ("ds900004", _derivative),
+        ("ds900005", _nested),
+    )
     for dataset_id, builder in builders:
         root = out / dataset_id
         builder(root)

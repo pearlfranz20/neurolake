@@ -11,3 +11,4 @@ dbt/.user.yml
 audit/*.log
 audit/*.err
 audit/*.time
+audit/discover.err

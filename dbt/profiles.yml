@@ -5,3 +5,6 @@ neurolake:
       type: duckdb
       path: "{{ env_var('NEUROLAKE_LAKE', '../data/lake') }}/neurolake.duckdb"
       threads: 4
+      settings:
+        # large datasets: let DuckDB reorder rows and spill instead of failing
+        preserve_insertion_order: false

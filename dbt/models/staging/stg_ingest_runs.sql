@@ -11,5 +11,6 @@ select
     n_files,
     n_metadata_files,
     n_read_errors,
+    coalesce(bidsignored_core_files, []) as bidsignored_core_files,
     row_number() over (partition by dataset_id order by finished_at desc) = 1 as is_current
 from {{ source('bronze', 'raw_ingest_runs') }}

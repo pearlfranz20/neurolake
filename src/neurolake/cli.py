@@ -100,13 +100,21 @@ def ingest_mirror(
 
 @app.command("discover-mirrors")
 def discover_mirrors(
-    sample: int = typer.Option(100, help="How many existing datasets to return."),
-    max_id: int = typer.Option(6500, help="Highest accession number to consider."),
+    sample: int = typer.Option(100, help="How many datasets to return."),
+    max_id: int = typer.Option(7500, help="Highest accession number to consider."),
     seed: int = typer.Option(42, help="Random seed, so a sample can be reproduced."),
     workers: int = typer.Option(8, min=1, max=32),
+    log_file: Path | None = typer.Option(None, help="CSV of every probe: id, status, tag."),
 ):
-    """Print a reproducible random sample of OpenNeuro accessions that have a GitHub mirror."""
+    """Print a reproducible random sample of OpenNeuro accessions that have a GitHub mirror.
+
+    Accessions ds000001..max_id are shuffled with `seed` and probed in that order; the
+    sample is exactly the first `sample` of them with a snapshot tag. Every accession
+    before the cut-off is resolved for certain (transient errors are retried, and a
+    persistent one aborts), so the same seed always yields the same sample."""
+    import csv
     import random
+    import sys
     from concurrent.futures import ThreadPoolExecutor
 
     from .sources.github_mirror import probe
@@ -114,14 +122,25 @@ def discover_mirrors(
     candidates = [f"ds{n:06d}" for n in range(1, max_id + 1)]
     random.Random(seed).shuffle(candidates)
     found: list[str] = []
+    log_rows: list[tuple[int, str, str, str]] = []
+    batch = workers * 4
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        for start in range(0, len(candidates), workers * 4):
-            batch = candidates[start : start + workers * 4]
-            for ds, tag in zip(batch, pool.map(probe, batch), strict=True):
-                if tag and len(found) < sample:
-                    found.append(ds)
+        for start in range(0, len(candidates), batch):
+            ids = candidates[start : start + batch]
+            for pos, (ds, (status, tag)) in enumerate(zip(ids, pool.map(probe, ids), strict=True), start):
+                if len(found) < sample:
+                    log_rows.append((pos, ds, status, tag or ""))
+                    if status == "found":
+                        found.append(ds)
             if len(found) >= sample:
                 break
+    if log_file:
+        with open(log_file, "w", newline="") as fh:
+            w = csv.writer(fh)
+            w.writerow(["shuffle_position", "dataset_id", "status", "tag"])
+            w.writerows(log_rows)
+    typer.echo(f"# seed={seed} max_id={max_id} probed={len(log_rows)} found={len(found)}", err=True)
+    print(f"# discover-mirrors --sample {sample} --max-id {max_id} --seed {seed}", file=sys.stdout)
     for ds in sorted(found):
         typer.echo(ds)
 

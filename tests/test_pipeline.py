@@ -93,8 +93,8 @@ def test_inheritance_respects_every_entity(con):
     """MP2RAGE inversions differ only by inv-; each must get its own sidecar."""
     rows = dict(
         con.execute(
-            """select path, effective_sidecar ->> 'InversionTime' from marts.fct_scan
-           where suffix = 'MP2RAGE'"""
+            """select path, effective_sidecar ->> 'InversionTime' from intermediate.int_effective_sidecars
+           where path like '%MP2RAGE%'"""
         ).fetchall()
     )
     assert rows == {

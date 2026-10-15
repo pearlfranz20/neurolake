@@ -1,18 +1,22 @@
-datatype,suffix,field,severity
-func,bold,RepetitionTime|VolumeTiming,error
-func,bold,TaskName,error
-eeg,eeg,TaskName,error
-eeg,eeg,SamplingFrequency,error
-eeg,eeg,PowerLineFrequency,error
-eeg,eeg,EEGReference,error
-eeg,eeg,SoftwareFilters,error
-meg,meg,TaskName,error
-meg,meg,SamplingFrequency,error
-meg,meg,PowerLineFrequency,error
-ieeg,ieeg,TaskName,error
-ieeg,ieeg,SamplingFrequency,error
-ieeg,ieeg,PowerLineFrequency,error
-fmap,phasediff,EchoTime1,error
-fmap,phasediff,EchoTime2,error
-dwi,dwi,PhaseEncodingDirection,warning
-anat,T1w,MagneticFieldStrength,warning
+datatype,suffix,field,requirement,requires_entity,schema_rule
+func,bold,RepetitionTime|VolumeTiming,required,,func.yaml MRIFuncRepetitionTime / MRIFuncVolumeTiming
+func,bold,TaskName,required,,func.yaml MRIFuncRequired
+eeg,eeg,TaskName,required,,eeg.yaml EEGTaskInformation
+eeg,eeg,SamplingFrequency,required,,eeg.yaml EEGHardware
+eeg,eeg,PowerLineFrequency,required,,eeg.yaml EEGHardware
+eeg,eeg,EEGReference,required,,eeg.yaml EEGHardware
+eeg,eeg,SoftwareFilters,required,,eeg.yaml EEGHardware
+meg,meg,TaskName,required,task,meg.yaml MEGTaskInformation
+meg,meg,SamplingFrequency,required,,meg.yaml MEGHardware
+meg,meg,PowerLineFrequency,required,,meg.yaml MEGHardware
+meg,meg,DewarPosition,required,,meg.yaml MEGHardware
+meg,meg,SoftwareFilters,required,,meg.yaml MEGHardware
+ieeg,ieeg,TaskName,required,,ieeg.yaml iEEGTaskInformation
+ieeg,ieeg,SamplingFrequency,required,,ieeg.yaml iEEGHardware
+ieeg,ieeg,PowerLineFrequency,required,,ieeg.yaml iEEGHardware
+ieeg,ieeg,SoftwareFilters,required,,ieeg.yaml iEEGHardware
+ieeg,ieeg,iEEGReference,required,,ieeg.yaml iEEGHardware
+fmap,phasediff,EchoTime1,required,,fmap.yaml MRIFieldmapPhaseDifference
+fmap,phasediff,EchoTime2,required,,fmap.yaml MRIFieldmapPhaseDifference
+dwi,dwi,PhaseEncodingDirection,recommended,,dwi.yaml MRIDiffusionOtherMetadata
+anat,T1w,MagneticFieldStrength,recommended,,mri.yaml MRIScannerHardware

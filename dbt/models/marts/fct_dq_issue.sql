@@ -44,7 +44,8 @@ inconsistent_repetition_time as (
     from {{ ref('fct_scan') }}
     where suffix = 'bold' and repetition_time_s is not null
     group by dataset_id, task_label, acq_label
-    having count(distinct repetition_time_s) > 1
+    -- 0.5% tolerance: rounding and measured-clock jitter are not real differences
+    having max(repetition_time_s) > 1.005 * min(repetition_time_s)
 ),
 
 inconsistent_sampling_frequency as (
@@ -55,7 +56,7 @@ inconsistent_sampling_frequency as (
     from {{ ref('fct_scan') }}
     where datatype in ('eeg', 'meg', 'ieeg') and sampling_frequency_hz is not null
     group by dataset_id, datatype, task_label, acq_label
-    having count(distinct sampling_frequency_hz) > 1
+    having max(sampling_frequency_hz) > 1.005 * min(sampling_frequency_hz)
 ),
 
 -- BOLD TRs are seconds; values this large are almost always milliseconds
@@ -67,16 +68,22 @@ implausible_repetition_time as (
     where suffix = 'bold' and (repetition_time_s >= 20 or repetition_time_s <= 0)
 ),
 
--- `field` may list alternatives (RepetitionTime|VolumeTiming); any one satisfies it.
+-- Field levels follow the BIDS schema (seeds/required_sidecar_fields.csv cites the
+-- schema rule for each). `field` may list alternatives (RepetitionTime|VolumeTiming).
 -- Files with an unfetched (annexed) sidecar are skipped: their metadata is unknown.
-missing_required_sidecar_field as (
-    select s.dataset_id, 'missing_required_sidecar_field', r.severity,
-        'data_file', s.path, replace(r.field, '|', ' or ') || ' not set by any applicable sidecar'
+missing_sidecar_field as (
+    select s.dataset_id, 'missing_' || r.requirement || '_sidecar_field',
+        case r.requirement when 'required' then 'error' else 'warning' end,
+        'data_file', s.path,
+        replace(r.field, '|', ' or ') || ' (' || upper(r.requirement) || ') not set by any applicable sidecar'
     from {{ ref('fct_scan') }} as s
     inner join required as r
         on r.datatype = s.datatype and r.suffix = s.suffix
     where not s.has_unfetched_sidecar
-      and len(list_filter(string_split(r.field, '|'), f -> (s.effective_sidecar -> f) is not null)) = 0
+      -- some fields only apply when an entity is present (MEG TaskName needs task-)
+      and (r.requires_entity is null
+           or len(list_filter(s.entities, e -> starts_with(e, r.requires_entity || '-'))) > 0)
+      and len(list_filter(string_split(r.field, '|'), f -> list_contains(s.sidecar_keys, f))) = 0
 ),
 
 fieldmap_intended_for_missing_target as (
@@ -127,11 +134,35 @@ malformed_tsv_row as (
     where is_malformed
 ),
 
+-- Subject folders must sit at the dataset root. When a whole dataset is uploaded one
+-- level too deep, nothing is recognised and every other rule goes quiet.
+subject_folders_not_at_root as (
+    select dataset_id, 'subject_folders_not_at_root', 'error', 'folder',
+        regexp_extract(path, '^([^/]+/)', 1),
+        count(*) || ' files under ' || regexp_extract(path, '^([^/]+/)', 1) || 'sub-*/ instead of the root'
+    from {{ ref('stg_files') }}
+    where regexp_matches(path, '^[^/]+/sub-[a-zA-Z0-9]+/')
+      and not regexp_matches(path, '^sub-')
+      and not is_bidsignored
+    group by dataset_id, regexp_extract(path, '^([^/]+/)', 1)
+),
+
+-- missing means absent from the listing; a file that exists but cannot be read is
+-- reported by the read-error rules instead
 dataset_description_missing as (
     select dataset_id, 'dataset_description_missing', 'error', 'file', 'dataset_description.json',
         'required file is missing'
     from {{ ref('dim_dataset') }}
-    where dataset_id not in (select dataset_id from {{ ref('stg_dataset_description') }})
+    where dataset_id not in (
+        select dataset_id from {{ ref('stg_files') }} where path = 'dataset_description.json'
+    )
+),
+
+bidsignore_matches_core_files as (
+    select r.dataset_id, 'bidsignore_matches_core_files', 'warning', 'file', '.bidsignore',
+        'patterns match core files, which were kept: ' || array_to_string(r.bidsignored_core_files, ', ')
+    from {{ ref('stg_ingest_runs') }} as r
+    where r.is_current and len(r.bidsignored_core_files) > 0
 ),
 
 dataset_description_missing_field as (
@@ -146,9 +177,12 @@ scans_tsv_missing_file as (
     select sc.dataset_id, 'scans_tsv_missing_file', 'warning', 'file', sc.scans_file,
         'lists ' || sc.path || ' which does not exist'
     from {{ ref('stg_scans') }} as sc
-    left join {{ ref('stg_files') }} as f
-        on f.dataset_id = sc.dataset_id and f.path = sc.path
-    where f.path is null
+    where not exists (
+        -- a target may be a file or a folder-format recording (CTF .ds, MEF3 .mefd)
+        select 1 from {{ ref('stg_files') }} as f
+        where f.dataset_id = sc.dataset_id
+          and (f.path = sc.path or starts_with(f.path, sc.path || '/'))
+    )
 ),
 
 data_file_size_unknown as (
@@ -165,14 +199,16 @@ unioned as (
     union all select * from inconsistent_repetition_time
     union all select * from implausible_repetition_time
     union all select * from inconsistent_sampling_frequency
-    union all select * from missing_required_sidecar_field
+    union all select * from missing_sidecar_field
     union all select * from fieldmap_intended_for_missing_target
     union all select * from ambiguous_sidecar_inheritance
     union all select * from invalid_json
     union all select * from metadata_read_error
     union all select * from metadata_not_fetched
     union all select * from malformed_tsv_row
+    union all select * from subject_folders_not_at_root
     union all select * from dataset_description_missing
+    union all select * from bidsignore_matches_core_files
     union all select * from dataset_description_missing_field
     union all select * from scans_tsv_missing_file
     union all select * from data_file_size_unknown

@@ -14,6 +14,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
 from collections.abc import Iterator
 from datetime import datetime, timezone
 from pathlib import Path
@@ -25,6 +26,9 @@ log = logging.getLogger(__name__)
 
 MIRROR_URL = "https://github.com/OpenNeuroDatasets/{dataset}.git"
 _SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
+_NUMERIC = re.compile(r"^\d+$")
+# GitHub answers a request for a repository that does not exist with an auth prompt.
+_ABSENT_MARKERS = ("could not read Username", "Repository not found", "not found")
 
 
 class MirrorError(RuntimeError):
@@ -45,9 +49,13 @@ def _git(*args: str, timeout: int = 600) -> str:
 
 
 def latest_snapshot_tag(tags: list[str]) -> str | None:
-    """Highest x.y.z tag. OpenNeuro's very old numeric tags (00001...) are ignored."""
+    """Highest x.y.z tag; for datasets that only have OpenNeuro's early numeric tags
+    (00001, 00002...), the highest of those."""
     versions = [(tuple(map(int, m.groups())), t) for t in tags if (m := _SEMVER.match(t))]
-    return max(versions)[1] if versions else None
+    if versions:
+        return max(versions)[1]
+    numeric = [t for t in tags if _NUMERIC.match(t)]
+    return max(numeric, key=int) if numeric else None
 
 
 def list_tags(dataset_id: str) -> list[str]:
@@ -55,12 +63,27 @@ def list_tags(dataset_id: str) -> list[str]:
     return [line.split("refs/tags/", 1)[1] for line in out.splitlines() if "refs/tags/" in line]
 
 
-def probe(dataset_id: str) -> str | None:
-    """Latest snapshot tag of a mirror, or None if the mirror does not exist."""
-    try:
-        return latest_snapshot_tag(list_tags(dataset_id))
-    except MirrorError:
-        return None
+def probe(dataset_id: str, attempts: int = 4) -> tuple[str, str | None]:
+    """Classify a mirror as ("found", tag), ("no_snapshot", None) or ("absent", None).
+
+    Transient failures (timeouts, rate limits, network errors) are retried and, if
+    they persist, raised: treating them as "absent" would silently bias a sample."""
+    delay = 2.0
+    for attempt in range(attempts):
+        try:
+            tag = latest_snapshot_tag(list_tags(dataset_id))
+            return ("found", tag) if tag else ("no_snapshot", None)
+        except MirrorError as exc:
+            if any(m in str(exc) for m in _ABSENT_MARKERS):
+                return ("absent", None)
+            if attempt == attempts - 1:
+                raise
+        except subprocess.TimeoutExpired:
+            if attempt == attempts - 1:
+                raise MirrorError(f"{dataset_id}: ls-remote timed out") from None
+        time.sleep(delay)
+        delay *= 2
+    raise AssertionError("unreachable")
 
 
 class GitHubMirrorSource:

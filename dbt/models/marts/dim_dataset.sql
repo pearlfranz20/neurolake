@@ -31,7 +31,7 @@ select
     d.dataset_name,
     d.bids_version,
     d.license,
-    d.dataset_type,
+    coalesce(d.dataset_type, 'raw') as dataset_type,
     coalesce(d.n_authors, 0) as n_authors,
     coalesce(sub.n_subjects, 0) as n_subjects,
     coalesce(s.n_scans, 0) as n_scans,

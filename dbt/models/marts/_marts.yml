@@ -6,6 +6,13 @@ models:
     columns:
       - name: dataset_id
         tests: [unique, not_null]
+      - name: dataset_type
+        description: raw unless dataset_description.json says derivative (or cannot be read).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [raw, derivative, study]
 
   - name: dim_subject
     description: >

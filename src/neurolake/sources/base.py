@@ -22,7 +22,8 @@ _METADATA_PATTERNS = [
 ]
 
 # Derivatives and source data are separate BIDS datasets with their own rules.
-_EXCLUDED_PREFIXES = ("derivatives/", "sourcedata/", "code/", ".git/", ".datalad/")
+# stimuli/ may hold anything (images, sounds, arbitrary JSON) and is not validated.
+_EXCLUDED_PREFIXES = ("derivatives/", "sourcedata/", "code/", "stimuli/", ".git/", ".datalad/")
 
 
 class MetadataReadError(Exception):

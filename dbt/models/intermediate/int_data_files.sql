@@ -9,6 +9,7 @@ with folder_files as (
         regexp_extract(path, '^(sub-[a-zA-Z0-9]+/(?:ses-[a-zA-Z0-9]+/)?[a-z]+/[^/]+\.(?:ds|mefd))/', 1) as path,
         size_bytes
     from {{ ref('stg_files') }}
+    where not is_bidsignored
 ),
 
 folder_recordings as (
@@ -19,7 +20,8 @@ folder_recordings as (
 ),
 
 candidates as (
-    select * from {{ ref('stg_files') }}
+    select * exclude (is_bidsignored) from {{ ref('stg_files') }}
+    where not is_bidsignored
     union all by name
     select dataset_id, snapshot, path, size_bytes, {{ bids_path_columns('path') }}
     from folder_recordings

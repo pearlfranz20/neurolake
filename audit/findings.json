@@ -1,0 +1,617 @@
+{
+  "sample": [
+    {
+      "datasets": 150,
+      "subjects": 6587,
+      "data_files": 57382,
+      "terabytes": 5.61,
+      "first_snapshot": "2018-07-14",
+      "last_snapshot": "2026-10-10",
+      "derivative_datasets": 2
+    }
+  ],
+  "datatypes": [
+    {
+      "datatype": "anat",
+      "datasets": 95,
+      "files": 7061
+    },
+    {
+      "datatype": "func",
+      "datasets": 87,
+      "files": 28158
+    },
+    {
+      "datatype": "eeg",
+      "datasets": 42,
+      "files": 13047
+    },
+    {
+      "datatype": "fmap",
+      "datasets": 40,
+      "files": 6029
+    },
+    {
+      "datatype": "dwi",
+      "datasets": 11,
+      "files": 1384
+    },
+    {
+      "datatype": "ieeg",
+      "datasets": 7,
+      "files": 565
+    },
+    {
+      "datatype": "nirs",
+      "datasets": 4,
+      "files": 203
+    },
+    {
+      "datatype": "meg",
+      "datasets": 4,
+      "files": 882
+    },
+    {
+      "datatype": "pet",
+      "datasets": 1,
+      "files": 53
+    }
+  ],
+  "headline": [
+    {
+      "raw_datasets": 148,
+      "with_errors": 6,
+      "with_warnings": 69,
+      "clean": 77
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "missing_participants_tsv",
+      "description": "The dataset has subjects but no participants.tsv",
+      "datasets": 28,
+      "pct_datasets": 18.9,
+      "issues": 28
+    },
+    {
+      "rule_id": "missing_recommended_sidecar_field",
+      "description": "A field the BIDS schema marks RECOMMENDED for this datatype is not set by any applicable sidecar",
+      "datasets": 26,
+      "pct_datasets": 17.6,
+      "issues": 781
+    },
+    {
+      "rule_id": "participant_without_data",
+      "description": "A participants.tsv row has no data files in the snapshot",
+      "datasets": 12,
+      "pct_datasets": 8.1,
+      "issues": 333
+    },
+    {
+      "rule_id": "inconsistent_sampling_frequency",
+      "description": "EEG/MEG/iEEG recordings of the same task and acquisition use SamplingFrequency values more than 0.5% apart",
+      "datasets": 6,
+      "pct_datasets": 4.1,
+      "issues": 9
+    },
+    {
+      "rule_id": "subject_missing_from_participants",
+      "description": "A subject has data files but no row in participants.tsv",
+      "datasets": 5,
+      "pct_datasets": 3.4,
+      "issues": 58
+    },
+    {
+      "rule_id": "inconsistent_repetition_time",
+      "description": "BOLD runs of the same task and acquisition use RepetitionTime values more than 0.5% apart",
+      "datasets": 5,
+      "pct_datasets": 3.4,
+      "issues": 9
+    },
+    {
+      "rule_id": "bidsignore_matches_core_files",
+      "description": "A .bidsignore pattern also matches core files such as dataset_description.json (they were kept)",
+      "datasets": 5,
+      "pct_datasets": 3.4,
+      "issues": 5
+    },
+    {
+      "rule_id": "missing_required_sidecar_field",
+      "description": "A field the BIDS schema marks REQUIRED for this datatype is not set by any applicable sidecar (skipped when a sidecar was not fetched)",
+      "datasets": 4,
+      "pct_datasets": 2.7,
+      "issues": 1130
+    },
+    {
+      "rule_id": "ambiguous_sidecar_inheritance",
+      "description": "More than one sidecar applies to a data file at the same folder level (BIDS 1.7.0 and later forbid this)",
+      "datasets": 3,
+      "pct_datasets": 2.0,
+      "issues": 39
+    },
+    {
+      "rule_id": "metadata_not_fetched",
+      "description": "A metadata file is stored in git-annex and its content was not fetched during ingest",
+      "datasets": 1,
+      "pct_datasets": 0.7,
+      "issues": 421
+    },
+    {
+      "rule_id": "fieldmap_intended_for_missing_target",
+      "description": "A fieldmap IntendedFor entry points at a file that does not exist",
+      "datasets": 1,
+      "pct_datasets": 0.7,
+      "issues": 32
+    },
+    {
+      "rule_id": "scans_tsv_missing_file",
+      "description": "A scans.tsv row references a file that does not exist",
+      "datasets": 1,
+      "pct_datasets": 0.7,
+      "issues": 24
+    },
+    {
+      "rule_id": "malformed_tsv_row",
+      "description": "A TSV row has a different number of columns than its header",
+      "datasets": 1,
+      "pct_datasets": 0.7,
+      "issues": 1
+    }
+  ],
+  "rule_severity": [
+    {
+      "rule_id": "ambiguous_sidecar_inheritance",
+      "severity": "info",
+      "datasets": 2
+    },
+    {
+      "rule_id": "ambiguous_sidecar_inheritance",
+      "severity": "warning",
+      "datasets": 1
+    },
+    {
+      "rule_id": "bidsignore_matches_core_files",
+      "severity": "warning",
+      "datasets": 5
+    },
+    {
+      "rule_id": "derivative_dataset",
+      "severity": "info",
+      "datasets": 2
+    },
+    {
+      "rule_id": "fieldmap_intended_for_missing_target",
+      "severity": "error",
+      "datasets": 1
+    },
+    {
+      "rule_id": "inconsistent_repetition_time",
+      "severity": "warning",
+      "datasets": 5
+    },
+    {
+      "rule_id": "inconsistent_sampling_frequency",
+      "severity": "warning",
+      "datasets": 6
+    },
+    {
+      "rule_id": "malformed_tsv_row",
+      "severity": "error",
+      "datasets": 1
+    },
+    {
+      "rule_id": "metadata_not_fetched",
+      "severity": "info",
+      "datasets": 1
+    },
+    {
+      "rule_id": "missing_participants_tsv",
+      "severity": "warning",
+      "datasets": 28
+    },
+    {
+      "rule_id": "missing_recommended_sidecar_field",
+      "severity": "warning",
+      "datasets": 26
+    },
+    {
+      "rule_id": "missing_required_sidecar_field",
+      "severity": "error",
+      "datasets": 4
+    },
+    {
+      "rule_id": "participant_without_data",
+      "severity": "warning",
+      "datasets": 12
+    },
+    {
+      "rule_id": "scans_tsv_missing_file",
+      "severity": "warning",
+      "datasets": 1
+    },
+    {
+      "rule_id": "subject_missing_from_participants",
+      "severity": "warning",
+      "datasets": 5
+    }
+  ],
+  "missing_fields": [
+    {
+      "field": "MagneticFieldStrength (RECOMMENDED)",
+      "severity": "warning",
+      "datasets": 26,
+      "files": 711
+    },
+    {
+      "field": "SamplingFrequency (REQUIRED)",
+      "severity": "error",
+      "datasets": 4,
+      "files": 226
+    },
+    {
+      "field": "TaskName (REQUIRED)",
+      "severity": "error",
+      "datasets": 4,
+      "files": 226
+    },
+    {
+      "field": "SoftwareFilters (REQUIRED)",
+      "severity": "error",
+      "datasets": 4,
+      "files": 226
+    },
+    {
+      "field": "PowerLineFrequency (REQUIRED)",
+      "severity": "error",
+      "datasets": 4,
+      "files": 226
+    },
+    {
+      "field": "EEGReference (REQUIRED)",
+      "severity": "error",
+      "datasets": 3,
+      "files": 223
+    },
+    {
+      "field": "PhaseEncodingDirection (RECOMMENDED)",
+      "severity": "warning",
+      "datasets": 2,
+      "files": 70
+    },
+    {
+      "field": "DewarPosition (REQUIRED)",
+      "severity": "error",
+      "datasets": 1,
+      "files": 3
+    }
+  ],
+  "by_year": [
+    {
+      "period": "2019 and earlier",
+      "datasets": 15,
+      "clean": 3,
+      "pct_clean": 20.0
+    },
+    {
+      "period": "2020",
+      "datasets": 15,
+      "clean": 5,
+      "pct_clean": 33.3
+    },
+    {
+      "period": "2021",
+      "datasets": 14,
+      "clean": 8,
+      "pct_clean": 57.1
+    },
+    {
+      "period": "2022",
+      "datasets": 17,
+      "clean": 6,
+      "pct_clean": 35.3
+    },
+    {
+      "period": "2023",
+      "datasets": 10,
+      "clean": 9,
+      "pct_clean": 90.0
+    },
+    {
+      "period": "2024",
+      "datasets": 25,
+      "clean": 16,
+      "pct_clean": 64.0
+    },
+    {
+      "period": "2025",
+      "datasets": 31,
+      "clean": 21,
+      "pct_clean": 67.7
+    },
+    {
+      "period": "2026",
+      "datasets": 21,
+      "clean": 9,
+      "pct_clean": 42.9
+    }
+  ],
+  "bids_versions": [
+    {
+      "version": "1.0",
+      "datasets": 33
+    },
+    {
+      "version": "1.1",
+      "datasets": 22
+    },
+    {
+      "version": "1.8",
+      "datasets": 20
+    },
+    {
+      "version": "1.7",
+      "datasets": 16
+    },
+    {
+      "version": "1.4",
+      "datasets": 14
+    },
+    {
+      "version": "1.9",
+      "datasets": 10
+    },
+    {
+      "version": "1.2",
+      "datasets": 8
+    },
+    {
+      "version": "1.6",
+      "datasets": 7
+    },
+    {
+      "version": "1.10",
+      "datasets": 6
+    },
+    {
+      "version": "1.5",
+      "datasets": 4
+    },
+    {
+      "version": "missing or unparseable",
+      "datasets": 4
+    },
+    {
+      "version": "1.3",
+      "datasets": 3
+    },
+    {
+      "version": "1.11",
+      "datasets": 1
+    },
+    {
+      "version": "2.1",
+      "datasets": 1
+    },
+    {
+      "version": "1.12",
+      "datasets": 1
+    }
+  ],
+  "acquisition_heterogeneity": [
+    {
+      "rule_id": "inconsistent_repetition_time",
+      "dataset_id": "ds005003",
+      "object_id": "task-rest",
+      "detail": "RepetitionTime values: 2.16, 2.17, 2.2, 2.33, 2.38, 2.5, 2.53, 2.56, 2.6, 2.7231, 3.01, 3.53 across 82 runs"
+    },
+    {
+      "rule_id": "inconsistent_repetition_time",
+      "dataset_id": "ds005003",
+      "object_id": "task-language",
+      "detail": "RepetitionTime values: 2.2, 2.55, 2.73, 2.7431, 3.0 across 36 runs"
+    },
+    {
+      "rule_id": "inconsistent_repetition_time",
+      "dataset_id": "ds005003",
+      "object_id": "task-motor",
+      "detail": "RepetitionTime values: 2.2, 2.55, 2.6, 2.73, 2.7431, 3.0, 3.06 across 38 runs"
+    },
+    {
+      "rule_id": "inconsistent_repetition_time",
+      "dataset_id": "ds005085",
+      "object_id": "task-sharedreward_acq-mb3me1",
+      "detail": "RepetitionTime values: 1.15, 1.7 across 7 runs"
+    },
+    {
+      "rule_id": "inconsistent_repetition_time",
+      "dataset_id": "ds005085",
+      "object_id": "task-sharedreward_acq-mb1me1",
+      "detail": "RepetitionTime values: 1.7, 3.39 across 8 runs"
+    },
+    {
+      "rule_id": "inconsistent_repetition_time",
+      "dataset_id": "ds005085",
+      "object_id": "task-sharedreward_acq-mb6me1",
+      "detail": "RepetitionTime values: 0.626, 1.7 across 7 runs"
+    },
+    {
+      "rule_id": "inconsistent_repetition_time",
+      "dataset_id": "ds005366",
+      "object_id": "task-Motor2Class",
+      "detail": "RepetitionTime values: 0.61, 1.6, 1.85, 1.93, 1.95, 2.5 across 396 runs"
+    },
+    {
+      "rule_id": "inconsistent_repetition_time",
+      "dataset_id": "ds006948",
+      "object_id": "task-francis",
+      "detail": "RepetitionTime values: 2.0, 2.09 across 225 runs"
+    },
+    {
+      "rule_id": "inconsistent_repetition_time",
+      "dataset_id": "ds007276",
+      "object_id": "task-taskbattery",
+      "detail": "RepetitionTime values: 1.1, 1.3 across 136 runs"
+    },
+    {
+      "rule_id": "inconsistent_sampling_frequency",
+      "dataset_id": "ds004295",
+      "object_id": "task-task",
+      "detail": "SamplingFrequency values: 512.0, 1024.0 across 26 recordings"
+    },
+    {
+      "rule_id": "inconsistent_sampling_frequency",
+      "dataset_id": "ds004902",
+      "object_id": "task-eyesopen",
+      "detail": "SamplingFrequency values: 500.0, 5000.0 across 142 recordings"
+    },
+    {
+      "rule_id": "inconsistent_sampling_frequency",
+      "dataset_id": "ds005059",
+      "object_id": "task-PAL1_acq-monopolar",
+      "detail": "SamplingFrequency values: 499.7071, 500.0, 1000.0, 1024.0, 1600.0 across 142 recordings"
+    },
+    {
+      "rule_id": "inconsistent_sampling_frequency",
+      "dataset_id": "ds005059",
+      "object_id": "task-PAL1_acq-bipolar",
+      "detail": "SamplingFrequency values: 499.7071, 500.0, 1000.0, 1024.0, 1600.0 across 140 recordings"
+    },
+    {
+      "rule_id": "inconsistent_sampling_frequency",
+      "dataset_id": "ds005284",
+      "object_id": "task-26ByBiosemi",
+      "detail": "SamplingFrequency values: 1024.0, 2048.0 across 26 recordings"
+    },
+    {
+      "rule_id": "inconsistent_sampling_frequency",
+      "dataset_id": "ds005491",
+      "object_id": "task-catFR2_acq-bipolar",
+      "detail": "SamplingFrequency values: 500.0, 999.0, 1000.0, 1600.0 across 25 recordings"
+    },
+    {
+      "rule_id": "inconsistent_sampling_frequency",
+      "dataset_id": "ds005491",
+      "object_id": "task-catFR2_acq-monopolar",
+      "detail": "SamplingFrequency values: 500.0, 999.0, 1000.0, 1600.0 across 26 recordings"
+    },
+    {
+      "rule_id": "inconsistent_sampling_frequency",
+      "dataset_id": "ds005522",
+      "object_id": "task-YC1_acq-bipolar",
+      "detail": "SamplingFrequency values: 500.0, 999.0, 1000.0, 1600.0, 1999.0, 2000.0 across 88 recordings"
+    },
+    {
+      "rule_id": "inconsistent_sampling_frequency",
+      "dataset_id": "ds005522",
+      "object_id": "task-YC1_acq-monopolar",
+      "detail": "SamplingFrequency values: 500.0, 999.0, 1000.0, 1600.0, 1999.0, 2000.0 across 88 recordings"
+    }
+  ],
+  "id_mismatch": [
+    {
+      "dataset_id": "ds001619",
+      "only_in_tsv": 8,
+      "only_in_data": 0,
+      "format_pairs": 0,
+      "has_format_mismatch": false
+    },
+    {
+      "dataset_id": "ds001838",
+      "only_in_tsv": 9,
+      "only_in_data": 7,
+      "format_pairs": 7,
+      "has_format_mismatch": true
+    },
+    {
+      "dataset_id": "ds002338",
+      "only_in_tsv": 6,
+      "only_in_data": 0,
+      "format_pairs": 0,
+      "has_format_mismatch": false
+    },
+    {
+      "dataset_id": "ds003838",
+      "only_in_tsv": 21,
+      "only_in_data": 0,
+      "format_pairs": 0,
+      "has_format_mismatch": false
+    },
+    {
+      "dataset_id": "ds004040",
+      "only_in_tsv": 0,
+      "only_in_data": 11,
+      "format_pairs": 0,
+      "has_format_mismatch": false
+    },
+    {
+      "dataset_id": "ds004103",
+      "only_in_tsv": 66,
+      "only_in_data": 0,
+      "format_pairs": 0,
+      "has_format_mismatch": false
+    },
+    {
+      "dataset_id": "ds004166",
+      "only_in_tsv": 0,
+      "only_in_data": 11,
+      "format_pairs": 0,
+      "has_format_mismatch": false
+    },
+    {
+      "dataset_id": "ds004226",
+      "only_in_tsv": 28,
+      "only_in_data": 28,
+      "format_pairs": 28,
+      "has_format_mismatch": true
+    },
+    {
+      "dataset_id": "ds005059",
+      "only_in_tsv": 3,
+      "only_in_data": 0,
+      "format_pairs": 0,
+      "has_format_mismatch": false
+    },
+    {
+      "dataset_id": "ds005366",
+      "only_in_tsv": 8,
+      "only_in_data": 0,
+      "format_pairs": 0,
+      "has_format_mismatch": false
+    },
+    {
+      "dataset_id": "ds005522",
+      "only_in_tsv": 3,
+      "only_in_data": 0,
+      "format_pairs": 0,
+      "has_format_mismatch": false
+    },
+    {
+      "dataset_id": "ds005697",
+      "only_in_tsv": 0,
+      "only_in_data": 1,
+      "format_pairs": 0,
+      "has_format_mismatch": false
+    },
+    {
+      "dataset_id": "ds006318",
+      "only_in_tsv": 86,
+      "only_in_data": 0,
+      "format_pairs": 0,
+      "has_format_mismatch": false
+    },
+    {
+      "dataset_id": "ds006833",
+      "only_in_tsv": 1,
+      "only_in_data": 0,
+      "format_pairs": 0,
+      "has_format_mismatch": false
+    },
+    {
+      "dataset_id": "ds007427",
+      "only_in_tsv": 94,
+      "only_in_data": 0,
+      "format_pairs": 0,
+      "has_format_mismatch": false
+    }
+  ]
+}
