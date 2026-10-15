@@ -62,3 +62,14 @@
 {% macro bids_na(expr) -%}
     nullif(nullif(trim({{ expr }}), 'n/a'), '')
 {%- endmacro %}
+
+{# True when a BIDSVersion string (e.g. "1.6.0") is older than major.minor. Unknown
+   or unparseable versions count as not older. #}
+{% macro bids_version_before(expr, major, minor) -%}
+    coalesce(
+        try_cast(split_part({{ expr }}, '.', 1) as int) < {{ major }}
+        or (try_cast(split_part({{ expr }}, '.', 1) as int) = {{ major }}
+            and try_cast(split_part({{ expr }}, '.', 2) as int) < {{ minor }}),
+        false
+    )
+{%- endmacro %}

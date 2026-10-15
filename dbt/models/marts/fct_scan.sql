@@ -32,6 +32,7 @@ select
     s.sidecar_paths,
     s.has_invalid_sidecar,
     s.has_ambiguous_level,
+    s.has_unfetched_sidecar,
     s.effective_sidecar
 from {{ ref('int_data_files') }} as f
 inner join {{ ref('int_effective_sidecars') }} as s using (data_file_id)

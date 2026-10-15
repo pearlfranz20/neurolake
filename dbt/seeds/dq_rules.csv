@@ -2,14 +2,17 @@ rule_id,default_severity,description
 subject_missing_from_participants,warning,A subject has data files but no row in participants.tsv
 participant_without_data,warning,A participants.tsv row has no data files in the snapshot
 missing_participants_tsv,warning,The dataset has subjects but no participants.tsv
+implausible_repetition_time,error,A BOLD RepetitionTime is 20 s or more or not positive; usually milliseconds written where BIDS expects seconds
 inconsistent_repetition_time,warning,BOLD runs of the same task use different RepetitionTime values
 inconsistent_sampling_frequency,warning,EEG/MEG/iEEG recordings of the same task use different SamplingFrequency values
-missing_required_sidecar_field,error,A field BIDS requires (or recommends) for the datatype is not set by any applicable sidecar
+missing_required_sidecar_field,error,A field BIDS requires (or recommends) for the datatype is not set by any applicable sidecar; skipped when a sidecar was not fetched
 fieldmap_intended_for_missing_target,error,A fieldmap IntendedFor entry points at a file that does not exist
-ambiguous_sidecar_inheritance,warning,More than one sidecar applies to a data file at the same folder level
+ambiguous_sidecar_inheritance,warning,More than one sidecar applies to a data file at the same folder level (BIDS 1.7.0 and later forbid this)
 invalid_json,error,A JSON metadata file cannot be parsed
 metadata_read_error,error,A metadata file is listed but its content could not be read (bad encoding or missing content)
+metadata_not_fetched,info,A metadata file is stored in git-annex and its content was not fetched during ingest
 malformed_tsv_row,error,A TSV row has a different number of columns than its header
+derivative_dataset,info,The dataset is a derivative (pipeline output); only file-integrity rules were applied
 dataset_description_missing,error,dataset_description.json is missing
 dataset_description_missing_field,error,dataset_description.json lacks Name or BIDSVersion
 scans_tsv_missing_file,warning,A scans.tsv row references a file that does not exist

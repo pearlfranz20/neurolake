@@ -32,6 +32,25 @@ candidates as (
         and {{ bids_entities_compatible('s', 'f') }}
 ),
 
+-- Sidecars that exist but were not fetched (git-annex). If one applies, the file's
+-- metadata is incomplete and required-field checks must not run on it.
+unfetched as (
+    select f.*
+    from {{ ref('stg_files') }} as f
+    inner join {{ ref('stg_read_errors') }} as e using (dataset_id, path)
+    where e.error_kind = 'not_fetched' and f.extension = '.json'
+),
+
+unfetched_hits as (
+    select distinct d.data_file_id
+    from data_files as d
+    inner join unfetched as s
+        on s.dataset_id = d.dataset_id
+        and s.suffix = d.suffix
+        and starts_with(d.directory, s.directory)
+        and {{ bids_entities_compatible('s', 'd') }}
+),
+
 merged as (
     select
         data_file_id,
@@ -60,6 +79,8 @@ select
     coalesce(m.sidecar_paths, []) as sidecar_paths,
     coalesce(m.n_sidecars, 0) as n_sidecars,
     coalesce(m.has_invalid_sidecar, false) as has_invalid_sidecar,
-    coalesce(m.has_ambiguous_level, false) as has_ambiguous_level
+    coalesce(m.has_ambiguous_level, false) as has_ambiguous_level,
+    u.data_file_id is not null as has_unfetched_sidecar
 from data_files as f
 left join merged as m using (data_file_id)
+left join unfetched_hits as u using (data_file_id)

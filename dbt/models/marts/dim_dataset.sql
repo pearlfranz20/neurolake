@@ -26,6 +26,7 @@ select
     r.dataset_id,
     r.snapshot,
     r.source,
+    r.snapshot_created_at,
     r.finished_at as ingested_at,
     d.dataset_name,
     d.bids_version,

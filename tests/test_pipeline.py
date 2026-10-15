@@ -4,7 +4,7 @@ and clean data must not raise errors."""
 import duckdb
 import pytest
 
-from neurolake.fixtures import EXPECTED_ISSUES
+from neurolake.fixtures import EXPECTED_ISSUES, MUST_NOT_FLAG
 from neurolake.report import build_report
 
 
@@ -23,6 +23,18 @@ def test_every_injected_defect_is_detected(con):
         if not any(i[0] == exp[0] and i[1] == exp[1] and exp[2] in i[2] for i in issues)
     ]
     assert not missing, f"undetected defects: {missing}"
+
+
+def test_known_false_positives_stay_quiet(con):
+    issues = con.execute(
+        "select dataset_id, rule_id, object_id || ' ' || detail from marts.fct_dq_issue"
+    ).fetchall()
+    hits = [
+        (ds, rule, needle)
+        for ds, rule, needle in MUST_NOT_FLAG
+        if any(i[0] == ds and i[1] == rule and needle in i[2] for i in issues)
+    ]
+    assert not hits, f"false positives: {hits}"
 
 
 def test_no_errors_outside_injected_defects(con):
@@ -63,14 +75,15 @@ def test_sex_and_handedness_normalised(con):
 def test_acq_time_joined_from_scans_tsv(con):
     n_missing = con.execute(
         """select count(*) from marts.fct_scan
-           where dataset_id = 'ds900001' and suffix in ('T1w', 'bold') and acq_time is null"""
+           where dataset_id = 'ds900001' and suffix in ('T1w', 'bold')
+             and coalesce(task_label, '') <> 'sparse' and acq_time is null"""
     ).fetchone()[0]
     assert n_missing == 0
 
 
 def test_report_renders(built_lake):
     page = build_report(built_lake / "neurolake.duckdb")
-    for ds in ("ds900001", "ds900002", "ds900003"):
+    for ds in ("ds900001", "ds900002", "ds900003", "ds900004"):
         assert ds in page
     assert "inconsistent_repetition_time" in page
     assert "<script" not in page

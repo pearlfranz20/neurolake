@@ -55,11 +55,14 @@ _SCHEMAS = {
             ("is_malformed", pa.bool_()),
         ]
     ),
-    "raw_read_errors": pa.schema([_RUN, ("path", pa.string()), ("error", pa.string())]),
+    "raw_read_errors": pa.schema(
+        [_RUN, ("path", pa.string()), ("error", pa.string()), ("error_kind", pa.string())]
+    ),
     "raw_ingest_runs": pa.schema(
         [
             _RUN,
             ("source", pa.string()),
+            ("snapshot_created_at", pa.timestamp("us", tz="UTC")),
             ("started_at", pa.timestamp("us", tz="UTC")),
             ("finished_at", pa.timestamp("us", tz="UTC")),
             ("n_files", pa.int64()),
@@ -134,11 +137,11 @@ def ingest(source: DatasetSource, lake: str | Path, max_workers: int = 8) -> Ing
     files = list(source.list_files())
     meta_paths = [f.path for f in files if is_metadata(f.path)]
 
-    def fetch(path: str) -> tuple[str, str | None, str | None]:
+    def fetch(path: str) -> tuple[str, str | None, MetadataReadError | None]:
         try:
             return path, source.read_text(path), None
         except MetadataReadError as exc:
-            return path, None, str(exc)
+            return path, None, exc
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         fetched = list(pool.map(fetch, meta_paths))
@@ -147,7 +150,7 @@ def ingest(source: DatasetSource, lake: str | Path, max_workers: int = 8) -> Ing
     for path, text, err in fetched:
         if err is not None:
             log.warning("could not read %s: %s", path, err)
-            error_rows.append({"run_id": run_id, "path": path, "error": err})
+            error_rows.append({"run_id": run_id, "path": path, "error": str(err), "error_kind": err.kind})
         elif path.endswith(".json"):
             json_rows.append({"run_id": run_id, "path": path, "content": text})
         else:
@@ -171,6 +174,7 @@ def ingest(source: DatasetSource, lake: str | Path, max_workers: int = 8) -> Ing
             {
                 "run_id": run_id,
                 "source": source.source_name,
+                "snapshot_created_at": getattr(source, "snapshot_created_at", None),
                 "started_at": started,
                 "finished_at": datetime.now(timezone.utc),
                 "n_files": len(files),

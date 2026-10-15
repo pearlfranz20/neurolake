@@ -33,3 +33,6 @@ inner join {{ ref('data_file_extensions') }} as e
     on c.extension = e.extension
 where c.subject_label is not null
   and c.datatype is not null
+  -- MEGIN/Elekta fine-calibration and crosstalk files are scanner calibration, not
+  -- recordings; BIDS gives them no sidecar.
+  and not (c.datatype = 'meg' and coalesce(c.acq_label, '') in ('crosstalk', 'calibration'))

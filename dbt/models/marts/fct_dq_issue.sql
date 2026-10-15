@@ -58,13 +58,25 @@ inconsistent_sampling_frequency as (
     having count(distinct sampling_frequency_hz) > 1
 ),
 
+-- BOLD TRs are seconds; values this large are almost always milliseconds
+implausible_repetition_time as (
+    select dataset_id, 'implausible_repetition_time', 'error',
+        'data_file', path,
+        'RepetitionTime ' || repetition_time_s || ' s; BIDS expects seconds (milliseconds by mistake?)'
+    from {{ ref('fct_scan') }}
+    where suffix = 'bold' and (repetition_time_s >= 20 or repetition_time_s <= 0)
+),
+
+-- `field` may list alternatives (RepetitionTime|VolumeTiming); any one satisfies it.
+-- Files with an unfetched (annexed) sidecar are skipped: their metadata is unknown.
 missing_required_sidecar_field as (
     select s.dataset_id, 'missing_required_sidecar_field', r.severity,
-        'data_file', s.path, r.field || ' not set by any applicable sidecar'
+        'data_file', s.path, replace(r.field, '|', ' or ') || ' not set by any applicable sidecar'
     from {{ ref('fct_scan') }} as s
     inner join required as r
         on r.datatype = s.datatype and r.suffix = s.suffix
-    where (s.effective_sidecar -> r.field) is null
+    where not s.has_unfetched_sidecar
+      and len(list_filter(string_split(r.field, '|'), f -> (s.effective_sidecar -> f) is not null)) = 0
 ),
 
 fieldmap_intended_for_missing_target as (
@@ -74,12 +86,18 @@ fieldmap_intended_for_missing_target as (
     where target_exists = false
 ),
 
+-- The one-sidecar-per-level rule arrived in BIDS 1.7.0, so datasets declaring an
+-- older version get an info note rather than a warning.
 ambiguous_sidecar_inheritance as (
-    select s.dataset_id, 'ambiguous_sidecar_inheritance', 'warning',
+    select s.dataset_id, 'ambiguous_sidecar_inheritance',
+        case when {{ bids_version_before('d.bids_version', 1, 7) }} then 'info' else 'warning' end,
         'data_file', s.path,
         'more than one sidecar applies at the same folder level: '
             || array_to_string(s.sidecar_paths, ', ')
+            || case when {{ bids_version_before('d.bids_version', 1, 7) }}
+                    then ' (allowed before BIDS 1.7.0; dataset declares ' || d.bids_version || ')' else '' end
     from {{ ref('fct_scan') }} as s
+    inner join {{ ref('dim_dataset') }} as d using (dataset_id)
     where s.has_ambiguous_level
 ),
 
@@ -92,6 +110,14 @@ invalid_json as (
 metadata_read_error as (
     select dataset_id, 'metadata_read_error', 'error', 'file', path, error
     from {{ ref('stg_read_errors') }}
+    where error_kind <> 'not_fetched'
+),
+
+-- annexed metadata that was not fetched is a limit of the ingest, not a dataset defect
+metadata_not_fetched as (
+    select dataset_id, 'metadata_not_fetched', 'info', 'file', path, error
+    from {{ ref('stg_read_errors') }}
+    where error_kind = 'not_fetched'
 ),
 
 malformed_tsv_row as (
@@ -137,17 +163,41 @@ unioned as (
     union all select * from participant_without_data
     union all select * from missing_participants_tsv
     union all select * from inconsistent_repetition_time
+    union all select * from implausible_repetition_time
     union all select * from inconsistent_sampling_frequency
     union all select * from missing_required_sidecar_field
     union all select * from fieldmap_intended_for_missing_target
     union all select * from ambiguous_sidecar_inheritance
     union all select * from invalid_json
     union all select * from metadata_read_error
+    union all select * from metadata_not_fetched
     union all select * from malformed_tsv_row
     union all select * from dataset_description_missing
     union all select * from dataset_description_missing_field
     union all select * from scans_tsv_missing_file
     union all select * from data_file_size_unknown
+),
+
+-- Derivative datasets (pipeline outputs) follow different rules. Only checks on file
+-- integrity apply to them; raw-data rules would only produce noise.
+derivative_dataset as (
+    select dataset_id, 'derivative_dataset', 'info', 'dataset', dataset_id,
+        'DatasetType is derivative; raw-data rules were not applied'
+    from {{ ref('dim_dataset') }}
+    where dataset_type = 'derivative'
+),
+
+scoped as (
+    select u.*
+    from unioned as u
+    inner join {{ ref('dim_dataset') }} as d using (dataset_id)
+    where d.dataset_type <> 'derivative'
+       or u.rule_id in (
+           'invalid_json', 'malformed_tsv_row', 'metadata_read_error', 'metadata_not_fetched',
+           'dataset_description_missing', 'dataset_description_missing_field'
+       )
+    union all
+    select * from derivative_dataset
 )
 
 select
@@ -158,4 +208,4 @@ select
     object_type,
     object_id,
     detail
-from unioned
+from scoped

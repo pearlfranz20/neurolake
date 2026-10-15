@@ -8,3 +8,6 @@ dbt/dbt_packages/
 logs/
 .airflow/
 dbt/.user.yml
+audit/*.log
+audit/*.err
+audit/*.time

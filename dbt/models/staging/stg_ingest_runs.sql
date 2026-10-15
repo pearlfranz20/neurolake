@@ -5,6 +5,7 @@ select
     snapshot,
     run_id,
     source,
+    snapshot_created_at,
     started_at,
     finished_at,
     n_files,

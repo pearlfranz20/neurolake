@@ -27,7 +27,14 @@ _EXCLUDED_PREFIXES = ("derivatives/", "sourcedata/", "code/", ".git/", ".datalad
 
 class MetadataReadError(Exception):
     """A metadata file exists in the listing but its content cannot be used (missing
-    content, bad encoding, 404). Recorded as a data-quality issue, not a failed run."""
+    content, bad encoding, 404). Recorded as a data-quality issue, not a failed run.
+
+    `kind` separates problems with the dataset ("encoding", "missing") from content
+    that simply was not fetched ("not_fetched"), which is not the dataset's fault."""
+
+    def __init__(self, message: str, kind: str = "missing"):
+        super().__init__(message)
+        self.kind = kind
 
 
 @dataclass(frozen=True)

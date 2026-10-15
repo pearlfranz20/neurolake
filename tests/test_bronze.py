@@ -80,11 +80,13 @@ def test_content_errors_are_recorded_not_fatal(tmp_path):
     (root,) = [r for r in fixtures.generate(tmp_path / "bids") if r.name == "ds900002"]
     lake = tmp_path / "lake"
     r = bronze.ingest(FlakySource(root, MetadataReadError("UnicodeDecodeError: bad byte")), lake)
-    assert r.n_read_errors == 1
     rows = duckdb.sql(
-        f"select path, error from read_parquet('{lake}/bronze/raw_read_errors/*/*/data.parquet')"
+        f"select path, error, error_kind from read_parquet('{lake}/bronze/raw_read_errors/*/*/data.parquet')"
+        " order by path"
     ).fetchall()
-    assert rows == [("participants.tsv", "UnicodeDecodeError: bad byte")]
+    assert r.n_read_errors == len(rows) == 2
+    assert rows[0] == ("participants.tsv", "UnicodeDecodeError: bad byte", "missing")
+    assert rows[1][2] == "not_fetched"  # the fixture's annexed sidecar
 
 
 def test_transport_errors_fail_the_run_and_keep_previous_data(tmp_path):

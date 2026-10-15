@@ -58,6 +58,16 @@ unit_tests:
           select 'ds1', 'sub-01/func/sub-01_task-x_desc-other_bold.json', 'sub-01/func/', 2,
                  '01', null, 'bold', '.json', ['sub-01', 'task-x', 'desc-other'], true,
                  '{"RepetitionTime": 7.7}'::json
+      - input: ref('stg_files')
+        format: sql
+        rows: |
+          select 'ds1' as dataset_id, 'x' as path, '' as directory, 'bold' as suffix, '.json' as extension,
+                 null::varchar as subject_label, null::varchar as session_label, []::varchar[] as entities
+          where false
+      - input: ref('stg_read_errors')
+        format: sql
+        rows: |
+          select 'ds1' as dataset_id, 'x' as path, 'not_fetched' as error_kind where false
     expect:
       rows:
         - {data_file_id: "ds1:f", n_sidecars: 2, has_ambiguous_level: false, effective_sidecar: '{"TaskName":"x","RepetitionTime":1.5}'}
@@ -80,6 +90,16 @@ unit_tests:
                  '{"A": 1}'::json as doc
           union all
           select 'ds1', 'sub-01_T1w.json', '', 0, null, null, 'T1w', '.json', ['sub-01'], true, '{"A": 2}'::json
+      - input: ref('stg_files')
+        format: sql
+        rows: |
+          select 'ds1' as dataset_id, 'x' as path, '' as directory, 'bold' as suffix, '.json' as extension,
+                 null::varchar as subject_label, null::varchar as session_label, []::varchar[] as entities
+          where false
+      - input: ref('stg_read_errors')
+        format: sql
+        rows: |
+          select 'ds1' as dataset_id, 'x' as path, 'not_fetched' as error_kind where false
     expect:
       rows:
         - {data_file_id: "ds1:f", n_sidecars: 2, has_ambiguous_level: true}

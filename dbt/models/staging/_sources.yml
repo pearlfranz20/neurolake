@@ -9,7 +9,8 @@ sources:
       external_location: >-
         read_parquet('{{ env_var("NEUROLAKE_LAKE", "../data/lake") }}/bronze/{name}/*/*/data.parquet',
         hive_partitioning = true,
-        hive_types_autocast = false)
+        hive_types_autocast = false,
+        union_by_name = true)
     tables:
       - name: raw_files
         description: Every file in a snapshot, with its size. Imaging payloads are listed, never downloaded.

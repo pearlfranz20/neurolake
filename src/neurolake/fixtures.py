@@ -9,6 +9,7 @@ injected defect is listed in EXPECTED_ISSUES so tests can assert they are caught
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 # (dataset_id, rule_id, subject_or_object) for every defect injected below.
@@ -24,6 +25,20 @@ EXPECTED_ISSUES = {
     ("ds900003", "dataset_description_missing_field", "BIDSVersion"),
     ("ds900003", "ambiguous_sidecar_inheritance", "sub-01/anat/sub-01_T1w.nii.gz"),
     ("ds900003", "metadata_read_error", "sub-02/sub-02_scans.tsv"),
+    ("ds900002", "metadata_not_fetched", "sub-01/eeg/sub-01_task-rest_eeg.json"),
+    ("ds900004", "derivative_dataset", "ds900004"),
+}
+
+# Real-world patterns that must NOT be reported (each was a false positive once).
+MUST_NOT_FLAG = {
+    # BIDS accepts VolumeTiming instead of RepetitionTime
+    ("ds900001", "missing_required_sidecar_field", "task-sparse"),
+    # sidecar exists but was not fetched, so the fields are unknown, not missing
+    ("ds900002", "missing_required_sidecar_field", "task-rest"),
+    # MEGIN crosstalk calibration files have no task or sidecar
+    ("ds900002", "missing_required_sidecar_field", "acq-crosstalk"),
+    # raw-data rules do not apply to derivative datasets
+    ("ds900004", "fieldmap_intended_for_missing_target", ""),
 }
 
 
@@ -119,6 +134,10 @@ def _fmri(root: Path) -> None:
         {"RepetitionTime": 1.5},
     )
 
+    # Sparse sampling: VolumeTiming replaces RepetitionTime, which BIDS allows.
+    _json(root / "task-sparse_bold.json", {"TaskName": "sparse", "VolumeTiming": [0.0, 4.0, 8.0]})
+    _blob(root / "sub-01" / "func" / "sub-01_task-sparse_bold.nii.gz", 4096)
+
     # MP2RAGE: two inversions whose sidecars differ only by the inv- entity. Each
     # volume must inherit its own InversionTime, never the other one's.
     for inv, ti in ((1, 0.8), (2, 2.7)):
@@ -159,6 +178,14 @@ def _eeg(root: Path) -> None:
             },
         )
 
+    # A resting EEG run whose sidecar lives in git-annex and was never fetched.
+    _blob(root / "sub-01" / "eeg" / "sub-01_task-rest_eeg.edf", 4096)
+    link = root / "sub-01" / "eeg" / "sub-01_task-rest_eeg.json"
+    os.symlink("../../.git/annex/objects/Xx/Yy/MD5E-s312--0f1e2d.json/MD5E-s312--0f1e2d.json", link)
+
+    # MEGIN crosstalk calibration: not a recording.
+    _blob(root / "sub-02" / "meg" / "sub-02_acq-crosstalk_meg.fif", 1000)
+
     # CTF MEG stores a recording as a folder; it must count as one data file.
     ds = root / "sub-01" / "meg" / "sub-01_task-oddball_meg.ds"
     _blob(ds / "sub-01_task-oddball_meg.meg4", 30000)
@@ -187,11 +214,26 @@ def _broken(root: Path) -> None:
     _write(root / "sub-02" / "sub-02_scans.tsv", b"filename\tacq_time\nanat/sub-02_T1w.nii.gz\t\xff\xfe\n")
 
 
+def _derivative(root: Path) -> None:
+    # Pipeline outputs published as a dataset: a raw-style check would wrongly flag
+    # the fieldmap, whose target is a raw file not included here.
+    _json(
+        root / "dataset_description.json",
+        {"Name": "Synthetic preprocessed outputs", "BIDSVersion": "1.9.0", "DatasetType": "derivative"},
+    )
+    _blob(root / "sub-01" / "fmap" / "sub-01_desc-preproc_fieldmap.nii.gz", 1024)
+    _json(
+        root / "sub-01" / "fmap" / "sub-01_desc-preproc_fieldmap.json",
+        {"IntendedFor": "func/sub-01_task-rest_bold.nii.gz", "Units": "Hz"},
+    )
+
+
 def generate(out_dir: str | Path) -> list[Path]:
-    """Write the three fixture datasets under out_dir and return their roots."""
+    """Write the fixture datasets under out_dir and return their roots."""
     out = Path(out_dir)
     roots = []
-    for dataset_id, builder in (("ds900001", _fmri), ("ds900002", _eeg), ("ds900003", _broken)):
+    builders = (("ds900001", _fmri), ("ds900002", _eeg), ("ds900003", _broken), ("ds900004", _derivative))
+    for dataset_id, builder in builders:
         root = out / dataset_id
         builder(root)
         roots.append(root)

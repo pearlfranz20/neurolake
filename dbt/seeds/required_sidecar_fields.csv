@@ -1,5 +1,5 @@
 datatype,suffix,field,severity
-func,bold,RepetitionTime,error
+func,bold,RepetitionTime|VolumeTiming,error
 func,bold,TaskName,error
 eeg,eeg,TaskName,error
 eeg,eeg,SamplingFrequency,error
