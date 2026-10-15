@@ -15,12 +15,41 @@ subject_missing_from_participants as (
       and dataset_id in (select distinct dataset_id from {{ ref('stg_participants') }})
 ),
 
+-- participant_id values MUST have the form sub-<label>
+participant_id_without_prefix as (
+    select dataset_id, 'participant_id_without_prefix', 'error', 'file', 'participants.tsv',
+        count(*) || ' participant_id values lack the sub- prefix, e.g. ' || min(participant_id)
+    from {{ ref('stg_participants') }}
+    where not starts_with(participant_id, 'sub-')
+    group by dataset_id
+),
+
+duplicate_participant_id as (
+    select dataset_id, 'duplicate_participant_id', 'error', 'file', 'participants.tsv',
+        count(*) || ' participant_id values appear more than once, e.g. ' || min(participant_id)
+    from (
+        select dataset_id, participant_id
+        from {{ ref('stg_participants') }}
+        group by all having count(*) > 1
+    )
+    group by dataset_id
+),
+
 participant_without_data as (
     select dataset_id, 'participant_without_data', 'warning',
         'subject', 'sub-' || subject_label,
         'listed in participants.tsv but no data files found'
     from {{ ref('dim_subject') }}
-    where in_participants_tsv and not has_data
+    where in_participants_tsv and not has_data and not has_only_ignored_data
+),
+
+-- a .bidsignore broad enough to hide every data file (ds004103 ends with `*`)
+bidsignore_hides_all_data as (
+    select dataset_id, 'bidsignore_hides_all_data', 'warning', 'file', '.bidsignore',
+        count(*) || ' subjects have data, all of it covered by .bidsignore, so nothing was checked'
+    from {{ ref('dim_subject') }}
+    group by dataset_id
+    having count(*) filter (where has_data) = 0 and count(*) filter (where has_only_ignored_data) > 0
 ),
 
 missing_participants_tsv as (
@@ -194,7 +223,10 @@ data_file_size_unknown as (
 
 unioned as (
     select * from subject_missing_from_participants
+    union all select * from participant_id_without_prefix
+    union all select * from duplicate_participant_id
     union all select * from participant_without_data
+    union all select * from bidsignore_hides_all_data
     union all select * from missing_participants_tsv
     union all select * from inconsistent_repetition_time
     union all select * from implausible_repetition_time

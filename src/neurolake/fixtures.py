@@ -29,6 +29,9 @@ EXPECTED_ISSUES = {
     ("ds900004", "derivative_dataset", "ds900004"),
     ("ds900005", "subject_folders_not_at_root", "study/"),
     ("ds900003", "bidsignore_matches_core_files", ".bidsignore"),
+    ("ds900006", "bidsignore_hides_all_data", ".bidsignore"),
+    ("ds900005", "participant_id_without_prefix", "participants.tsv"),
+    ("ds900006", "duplicate_participant_id", "participants.tsv"),
 }
 
 # Real-world patterns that must NOT be reported (each was a false positive once).
@@ -43,6 +46,8 @@ MUST_NOT_FLAG = {
     ("ds900003", "invalid_json", "extra/notes.json"),
     # a scans.tsv row pointing at a bidsignored file points at a file that exists
     ("ds900003", "scans_tsv_missing_file", "acq-scout"),
+    # subjects whose data is all bidsignored still have data
+    ("ds900006", "participant_without_data", ""),
     # a scans.tsv row may point at a folder-format recording (CTF .ds)
     ("ds900002", "scans_tsv_missing_file", "meg.ds"),
     # raw-data rules do not apply to derivative datasets
@@ -259,8 +264,19 @@ def _derivative(root: Path) -> None:
 def _nested(root: Path) -> None:
     # The whole dataset was uploaded one folder too deep.
     _json(root / "dataset_description.json", {"Name": "Synthetic nested upload", "BIDSVersion": "1.9.0"})
-    _tsv(root / "participants.tsv", ["participant_id"], [["sub-01"]])
+    _tsv(root / "participants.tsv", ["participant_id"], [["01"]])
     _blob(root / "study" / "sub-01" / "anat" / "sub-01_T1w.nii.gz", 2048)
+
+
+def _ignored(root: Path) -> None:
+    # A catch-all `*` in .bidsignore hides every data file from the checks.
+    _json(
+        root / "dataset_description.json", {"Name": "Synthetic over-ignored dataset", "BIDSVersion": "1.8.0"}
+    )
+    _tsv(root / "participants.tsv", ["participant_id"], [["sub-01"], ["sub-02"], ["sub-02"]])
+    for sub in ("sub-01", "sub-02"):
+        _blob(root / sub / "anat" / f"{sub}_T1w.nii.gz", 2048)
+    _write(root / ".bidsignore", "*\n")
 
 
 def generate(out_dir: str | Path) -> list[Path]:
@@ -273,6 +289,7 @@ def generate(out_dir: str | Path) -> list[Path]:
         ("ds900003", _broken),
         ("ds900004", _derivative),
         ("ds900005", _nested),
+        ("ds900006", _ignored),
     )
     for dataset_id, builder in builders:
         root = out / dataset_id

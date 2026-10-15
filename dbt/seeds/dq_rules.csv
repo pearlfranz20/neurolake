@@ -1,5 +1,7 @@
 rule_id,default_severity,description
 subject_missing_from_participants,warning,A subject has data files but no row in participants.tsv
+participant_id_without_prefix,error,participant_id values in participants.tsv lack the required sub- prefix
+duplicate_participant_id,error,The same participant_id appears on more than one participants.tsv row
 participant_without_data,warning,A participants.tsv row has no data files in the snapshot
 missing_participants_tsv,warning,The dataset has subjects but no participants.tsv
 implausible_repetition_time,error,A BOLD RepetitionTime is 20 s or more or not positive; usually milliseconds written where BIDS expects seconds
@@ -16,6 +18,7 @@ malformed_tsv_row,error,A TSV row has a different number of columns than its hea
 derivative_dataset,info,The dataset is a derivative (pipeline output); only file-integrity rules were applied
 subject_folders_not_at_root,error,Subject folders sit inside another folder instead of at the dataset root
 bidsignore_matches_core_files,warning,A .bidsignore pattern also matches core files such as dataset_description.json (they were kept)
+bidsignore_hides_all_data,warning,".bidsignore covers every data file, so the dataset's data escapes all checks"
 dataset_description_missing,error,dataset_description.json is missing
 dataset_description_missing_field,error,dataset_description.json lacks Name or BIDSVersion
 scans_tsv_missing_file,warning,A scans.tsv row references a file that does not exist

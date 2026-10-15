@@ -60,14 +60,55 @@
   "headline": [
     {
       "raw_datasets": 148,
-      "with_errors": 6,
-      "with_warnings": 69,
-      "clean": 77
+      "with_errors": 11,
+      "with_warnings": 68,
+      "clean": 76
     }
   ],
   "rules": [
     {
+      "rule_id": "participant_id_without_prefix",
+      "severity": "error",
+      "description": "participant_id values in participants.tsv lack the required sub- prefix",
+      "datasets": 5,
+      "pct_datasets": 3.4,
+      "issues": 5
+    },
+    {
+      "rule_id": "missing_required_sidecar_field",
+      "severity": "error",
+      "description": "A field the BIDS schema marks REQUIRED for this datatype is not set by any applicable sidecar (skipped when a sidecar was not fetched)",
+      "datasets": 4,
+      "pct_datasets": 2.7,
+      "issues": 1130
+    },
+    {
+      "rule_id": "fieldmap_intended_for_missing_target",
+      "severity": "error",
+      "description": "A fieldmap IntendedFor entry points at a file that does not exist",
+      "datasets": 1,
+      "pct_datasets": 0.7,
+      "issues": 32
+    },
+    {
+      "rule_id": "malformed_tsv_row",
+      "severity": "error",
+      "description": "A TSV row has a different number of columns than its header",
+      "datasets": 1,
+      "pct_datasets": 0.7,
+      "issues": 1
+    },
+    {
+      "rule_id": "duplicate_participant_id",
+      "severity": "error",
+      "description": "The same participant_id appears on more than one participants.tsv row",
+      "datasets": 1,
+      "pct_datasets": 0.7,
+      "issues": 1
+    },
+    {
       "rule_id": "missing_participants_tsv",
+      "severity": "warning",
       "description": "The dataset has subjects but no participants.tsv",
       "datasets": 28,
       "pct_datasets": 18.9,
@@ -75,6 +116,7 @@
     },
     {
       "rule_id": "missing_recommended_sidecar_field",
+      "severity": "warning",
       "description": "A field the BIDS schema marks RECOMMENDED for this datatype is not set by any applicable sidecar",
       "datasets": 26,
       "pct_datasets": 17.6,
@@ -82,13 +124,15 @@
     },
     {
       "rule_id": "participant_without_data",
+      "severity": "warning",
       "description": "A participants.tsv row has no data files in the snapshot",
-      "datasets": 12,
-      "pct_datasets": 8.1,
-      "issues": 333
+      "datasets": 10,
+      "pct_datasets": 6.8,
+      "issues": 246
     },
     {
       "rule_id": "inconsistent_sampling_frequency",
+      "severity": "warning",
       "description": "EEG/MEG/iEEG recordings of the same task and acquisition use SamplingFrequency values more than 0.5% apart",
       "datasets": 6,
       "pct_datasets": 4.1,
@@ -96,6 +140,7 @@
     },
     {
       "rule_id": "subject_missing_from_participants",
+      "severity": "warning",
       "description": "A subject has data files but no row in participants.tsv",
       "datasets": 5,
       "pct_datasets": 3.4,
@@ -103,6 +148,7 @@
     },
     {
       "rule_id": "inconsistent_repetition_time",
+      "severity": "warning",
       "description": "BOLD runs of the same task and acquisition use RepetitionTime values more than 0.5% apart",
       "datasets": 5,
       "pct_datasets": 3.4,
@@ -110,52 +156,51 @@
     },
     {
       "rule_id": "bidsignore_matches_core_files",
+      "severity": "warning",
       "description": "A .bidsignore pattern also matches core files such as dataset_description.json (they were kept)",
       "datasets": 5,
       "pct_datasets": 3.4,
       "issues": 5
     },
     {
-      "rule_id": "missing_required_sidecar_field",
-      "description": "A field the BIDS schema marks REQUIRED for this datatype is not set by any applicable sidecar (skipped when a sidecar was not fetched)",
-      "datasets": 4,
-      "pct_datasets": 2.7,
-      "issues": 1130
+      "rule_id": "bidsignore_hides_all_data",
+      "severity": "warning",
+      "description": ".bidsignore covers every data file, so the dataset's data escapes all checks",
+      "datasets": 1,
+      "pct_datasets": 0.7,
+      "issues": 1
     },
     {
       "rule_id": "ambiguous_sidecar_inheritance",
+      "severity": "warning",
       "description": "More than one sidecar applies to a data file at the same folder level (BIDS 1.7.0 and later forbid this)",
-      "datasets": 3,
-      "pct_datasets": 2.0,
-      "issues": 39
-    },
-    {
-      "rule_id": "metadata_not_fetched",
-      "description": "A metadata file is stored in git-annex and its content was not fetched during ingest",
       "datasets": 1,
       "pct_datasets": 0.7,
-      "issues": 421
-    },
-    {
-      "rule_id": "fieldmap_intended_for_missing_target",
-      "description": "A fieldmap IntendedFor entry points at a file that does not exist",
-      "datasets": 1,
-      "pct_datasets": 0.7,
-      "issues": 32
+      "issues": 11
     },
     {
       "rule_id": "scans_tsv_missing_file",
+      "severity": "warning",
       "description": "A scans.tsv row references a file that does not exist",
       "datasets": 1,
       "pct_datasets": 0.7,
       "issues": 24
     },
     {
-      "rule_id": "malformed_tsv_row",
-      "description": "A TSV row has a different number of columns than its header",
+      "rule_id": "ambiguous_sidecar_inheritance",
+      "severity": "info",
+      "description": "More than one sidecar applies to a data file at the same folder level (BIDS 1.7.0 and later forbid this)",
+      "datasets": 2,
+      "pct_datasets": 1.4,
+      "issues": 28
+    },
+    {
+      "rule_id": "metadata_not_fetched",
+      "severity": "info",
+      "description": "A metadata file is stored in git-annex and its content was not fetched during ingest",
       "datasets": 1,
       "pct_datasets": 0.7,
-      "issues": 1
+      "issues": 421
     }
   ],
   "rule_severity": [
@@ -170,6 +215,11 @@
       "datasets": 1
     },
     {
+      "rule_id": "bidsignore_hides_all_data",
+      "severity": "warning",
+      "datasets": 1
+    },
+    {
       "rule_id": "bidsignore_matches_core_files",
       "severity": "warning",
       "datasets": 5
@@ -178,6 +228,11 @@
       "rule_id": "derivative_dataset",
       "severity": "info",
       "datasets": 2
+    },
+    {
+      "rule_id": "duplicate_participant_id",
+      "severity": "error",
+      "datasets": 1
     },
     {
       "rule_id": "fieldmap_intended_for_missing_target",
@@ -220,9 +275,14 @@
       "datasets": 4
     },
     {
+      "rule_id": "participant_id_without_prefix",
+      "severity": "error",
+      "datasets": 5
+    },
+    {
       "rule_id": "participant_without_data",
       "severity": "warning",
-      "datasets": 12
+      "datasets": 10
     },
     {
       "rule_id": "scans_tsv_missing_file",
@@ -289,8 +349,8 @@
     {
       "period": "2019 and earlier",
       "datasets": 15,
-      "clean": 3,
-      "pct_clean": 20.0
+      "clean": 2,
+      "pct_clean": 13.3
     },
     {
       "period": "2020",
@@ -301,8 +361,8 @@
     {
       "period": "2021",
       "datasets": 14,
-      "clean": 8,
-      "pct_clean": 57.1
+      "clean": 7,
+      "pct_clean": 50.0
     },
     {
       "period": "2022",
@@ -319,8 +379,8 @@
     {
       "period": "2024",
       "datasets": 25,
-      "clean": 16,
-      "pct_clean": 64.0
+      "clean": 17,
+      "pct_clean": 68.0
     },
     {
       "period": "2025",
@@ -385,11 +445,11 @@
       "datasets": 3
     },
     {
-      "version": "1.11",
+      "version": "2.1",
       "datasets": 1
     },
     {
-      "version": "2.1",
+      "version": "1.11",
       "datasets": 1
     },
     {
@@ -467,14 +527,14 @@
     {
       "rule_id": "inconsistent_sampling_frequency",
       "dataset_id": "ds005059",
-      "object_id": "task-PAL1_acq-monopolar",
-      "detail": "SamplingFrequency values: 499.7071, 500.0, 1000.0, 1024.0, 1600.0 across 142 recordings"
+      "object_id": "task-PAL1_acq-bipolar",
+      "detail": "SamplingFrequency values: 499.7071, 500.0, 1000.0, 1024.0, 1600.0 across 140 recordings"
     },
     {
       "rule_id": "inconsistent_sampling_frequency",
       "dataset_id": "ds005059",
-      "object_id": "task-PAL1_acq-bipolar",
-      "detail": "SamplingFrequency values: 499.7071, 500.0, 1000.0, 1024.0, 1600.0 across 140 recordings"
+      "object_id": "task-PAL1_acq-monopolar",
+      "detail": "SamplingFrequency values: 499.7071, 500.0, 1000.0, 1024.0, 1600.0 across 142 recordings"
     },
     {
       "rule_id": "inconsistent_sampling_frequency",
@@ -485,25 +545,25 @@
     {
       "rule_id": "inconsistent_sampling_frequency",
       "dataset_id": "ds005491",
-      "object_id": "task-catFR2_acq-bipolar",
-      "detail": "SamplingFrequency values: 500.0, 999.0, 1000.0, 1600.0 across 25 recordings"
-    },
-    {
-      "rule_id": "inconsistent_sampling_frequency",
-      "dataset_id": "ds005491",
       "object_id": "task-catFR2_acq-monopolar",
       "detail": "SamplingFrequency values: 500.0, 999.0, 1000.0, 1600.0 across 26 recordings"
     },
     {
       "rule_id": "inconsistent_sampling_frequency",
-      "dataset_id": "ds005522",
-      "object_id": "task-YC1_acq-bipolar",
-      "detail": "SamplingFrequency values: 500.0, 999.0, 1000.0, 1600.0, 1999.0, 2000.0 across 88 recordings"
+      "dataset_id": "ds005491",
+      "object_id": "task-catFR2_acq-bipolar",
+      "detail": "SamplingFrequency values: 500.0, 999.0, 1000.0, 1600.0 across 25 recordings"
     },
     {
       "rule_id": "inconsistent_sampling_frequency",
       "dataset_id": "ds005522",
       "object_id": "task-YC1_acq-monopolar",
+      "detail": "SamplingFrequency values: 500.0, 999.0, 1000.0, 1600.0, 1999.0, 2000.0 across 88 recordings"
+    },
+    {
+      "rule_id": "inconsistent_sampling_frequency",
+      "dataset_id": "ds005522",
+      "object_id": "task-YC1_acq-bipolar",
       "detail": "SamplingFrequency values: 500.0, 999.0, 1000.0, 1600.0, 1999.0, 2000.0 across 88 recordings"
     }
   ],
@@ -613,5 +673,205 @@
       "format_pairs": 0,
       "has_format_mismatch": false
     }
-  ]
+  ],
+  "error_datasets": [
+    {
+      "dataset_id": "ds004166",
+      "rules": [
+        "missing_required_sidecar_field"
+      ],
+      "issues": 1065
+    },
+    {
+      "dataset_id": "ds004348",
+      "rules": [
+        "missing_required_sidecar_field"
+      ],
+      "issues": 45
+    },
+    {
+      "dataset_id": "ds006833",
+      "rules": [
+        "fieldmap_intended_for_missing_target"
+      ],
+      "issues": 32
+    },
+    {
+      "dataset_id": "ds005065",
+      "rules": [
+        "missing_required_sidecar_field"
+      ],
+      "issues": 15
+    },
+    {
+      "dataset_id": "ds005697",
+      "rules": [
+        "missing_required_sidecar_field"
+      ],
+      "issues": 5
+    },
+    {
+      "dataset_id": "ds001541",
+      "rules": [
+        "duplicate_participant_id",
+        "participant_id_without_prefix"
+      ],
+      "issues": 2
+    },
+    {
+      "dataset_id": "ds003012",
+      "rules": [
+        "malformed_tsv_row"
+      ],
+      "issues": 1
+    },
+    {
+      "dataset_id": "ds001838",
+      "rules": [
+        "participant_id_without_prefix"
+      ],
+      "issues": 1
+    },
+    {
+      "dataset_id": "ds001547",
+      "rules": [
+        "participant_id_without_prefix"
+      ],
+      "issues": 1
+    },
+    {
+      "dataset_id": "ds003136",
+      "rules": [
+        "participant_id_without_prefix"
+      ],
+      "issues": 1
+    },
+    {
+      "dataset_id": "ds003569",
+      "rules": [
+        "participant_id_without_prefix"
+      ],
+      "issues": 1
+    }
+  ],
+  "recent_vs_older": [
+    {
+      "recent": false,
+      "datasets": 71,
+      "clean": 29,
+      "no_participants": 18
+    },
+    {
+      "recent": true,
+      "datasets": 77,
+      "clean": 47,
+      "no_participants": 10
+    }
+  ],
+  "bidsignore_core": [
+    {
+      "dataset_id": "ds001619",
+      "detail": "patterns match core files, which were kept: README.txt"
+    },
+    {
+      "dataset_id": "ds003469",
+      "detail": "patterns match core files, which were kept: CHANGES"
+    },
+    {
+      "dataset_id": "ds004103",
+      "detail": "patterns match core files, which were kept: CHANGES, README, dataset_description.json, participants.json, participants.tsv"
+    },
+    {
+      "dataset_id": "ds005003",
+      "detail": "patterns match core files, which were kept: README"
+    },
+    {
+      "dataset_id": "ds006833",
+      "detail": "patterns match core files, which were kept: dataset_description.json"
+    }
+  ],
+  "recordings_without_sidecar": [
+    {
+      "dataset_id": "ds004166",
+      "datatype": "eeg",
+      "recordings": 213
+    },
+    {
+      "dataset_id": "ds004348",
+      "datatype": "eeg",
+      "recordings": 9
+    },
+    {
+      "dataset_id": "ds005065",
+      "datatype": "meg",
+      "recordings": 3
+    },
+    {
+      "dataset_id": "ds005697",
+      "datatype": "eeg",
+      "recordings": 1
+    },
+    {
+      "dataset_id": "ds006833",
+      "datatype": "func",
+      "recordings": 1
+    }
+  ],
+  "id_format_examples": [
+    {
+      "dataset_id": "ds001838",
+      "in_participants_tsv": [
+        "1",
+        "2",
+        "3"
+      ],
+      "in_data": [
+        "sub-01",
+        "sub-02",
+        "sub-04"
+      ]
+    },
+    {
+      "dataset_id": "ds004226",
+      "in_participants_tsv": [
+        "sub-1",
+        "sub-2",
+        "sub-3"
+      ],
+      "in_data": [
+        "sub-001",
+        "sub-002",
+        "sub-003"
+      ]
+    }
+  ],
+  "subjects_quartiles": [
+    {
+      "q": [
+        16.75,
+        28.0,
+        52.25
+      ],
+      "max": 608
+    }
+  ],
+  "rule_count": 21,
+  "mirror_estimate": {
+    "probed": 650,
+    "found": 150,
+    "max_id": 7500,
+    "estimated_mirrors": 1700.0,
+    "ci95": [
+      1500.0,
+      2000.0
+    ]
+  },
+  "recent_vs_older_test": {
+    "older_clean": 29,
+    "older_n": 71,
+    "recent_clean": 47,
+    "recent_n": 77,
+    "fisher_p": 0.021,
+    "no_participants_p": 0.062
+  }
 }

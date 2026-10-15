@@ -48,10 +48,13 @@ def neurolake_openneuro():
 
     @task(max_active_tis_per_dag=4)
     def ingest(dataset_id: str) -> dict:
+        # The GitHub (DataLad) mirrors are what the audit ran on; the OpenNeuro API
+        # source (OpenNeuroSource) is a drop-in alternative.
         from neurolake.bronze import ingest as land
-        from neurolake.sources import OpenNeuroSource
+        from neurolake.sources import GitHubMirrorSource
 
-        r = land(OpenNeuroSource(dataset_id), LAKE)
+        with GitHubMirrorSource(dataset_id) as src:
+            r = land(src, LAKE)
         return {
             "dataset_id": r.dataset_id,
             "snapshot": r.snapshot,

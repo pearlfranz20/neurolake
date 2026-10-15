@@ -1,0 +1,201 @@
+<title>OpenNeuro Metadata Audit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="A reproducible audit of BIDS metadata quality across a random sample of OpenNeuro datasets.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+:root {
+  /* Layout: one 68ch reading column; charts and tables may widen to 760px. */
+  --bg: #f7f8fa; --surface: #ffffff; --fg: #141a22; --muted: #586274; --faint: #8a93a3;
+  --line: #e1e5eb; --grid: #edf0f4; --accent: #2a5ea8; --accent-soft: #e6eef9;
+  --series: #2a78d6;
+  --critical: #d03b3b; --warning: #fab219; --info: #9aa3b2;
+  --code-bg: #eef1f5;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1318; --surface: #161b22; --fg: #e4e8ee; --muted: #a2acbb; --faint: #7c8696;
+  --line: #2a323d; --grid: #1f262f; --accent: #86afe6; --accent-soft: #1b2738;
+  --series: #3987e5; --info: #6f7888; --code-bg: #1d242d; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f1318; --surface: #161b22; --fg: #e4e8ee; --muted: #a2acbb; --faint: #7c8696;
+  --line: #2a323d; --grid: #1f262f; --accent: #86afe6; --accent-soft: #1b2738;
+  --series: #3987e5; --info: #6f7888; --code-bg: #1d242d; color-scheme: dark; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.6; margin: 0; }
+main { max-width: 760px; margin: 0 auto; padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 44px; }
+section, header { display: grid; gap: 14px; min-width: 0; }
+h1, h2 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(1.9rem, 5vw, 2.6rem); line-height: 1.12; }
+h2 { font-size: 1.4rem; line-height: 1.25; }
+p, ul, ol { margin: 0; max-width: 68ch; }
+ul, ol { padding-left: 1.2em; display: grid; gap: 6px; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.lede { font-size: 1.12rem; color: var(--muted); }
+code, .mono { font-family: var(--font-mono); font-size: 0.86em; }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+a { color: var(--accent); }
+a:focus-visible, [tabindex]:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 2px; }
+.stat b { font-family: var(--font-display); font-size: 1.9rem; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat span { font-size: 0.85rem; color: var(--muted); }
+figure { margin: 0; display: grid; gap: 10px; min-width: 0; }
+figcaption { font-size: 0.85rem; color: var(--muted); max-width: 68ch; }
+.chart { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px 16px 14px; overflow-x: auto; position: relative; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.82rem; color: var(--muted); margin-bottom: 12px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.hbars { display: grid; grid-template-columns: minmax(0, 15.5rem) minmax(160px, 1fr) 3.4rem; gap: 6px 12px; align-items: center; min-width: 440px; }
+.hbars .lab { font-size: 0.86rem; text-align: right; color: var(--fg); }
+.hbars .lab small { color: var(--faint); font-family: var(--font-mono); font-size: 0.72rem; margin-right: 4px; }
+.hbars .val { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.track { position: relative; height: 16px; }
+.track .gl { position: absolute; top: -4px; bottom: -4px; width: 1px; background: var(--grid); }
+.bar { position: absolute; left: 0; top: 2px; height: 12px; border-radius: 0 4px 4px 0; cursor: default; }
+.bar.error { background: var(--critical); } .bar.warning { background: var(--warning); } .bar.info { background: var(--info); }
+.axis { display: grid; grid-template-columns: minmax(0, 15.5rem) minmax(160px, 1fr) 3.4rem; gap: 0 12px; min-width: 440px; margin-top: 6px; }
+.axis .ticks { position: relative; height: 1.2em; font-size: 0.72rem; color: var(--faint); font-variant-numeric: tabular-nums; }
+.axis .ticks span { position: absolute; transform: translateX(-50%); }
+.axis .ticks span:first-child { transform: none; }
+.cols { display: grid; grid-template-columns: 2.4rem 1fr; gap: 0 8px; min-width: 420px; }
+.yaxis { position: relative; height: 200px; font-size: 0.72rem; color: var(--faint); font-variant-numeric: tabular-nums; }
+.yaxis span { position: absolute; right: 0; transform: translateY(50%); }
+.plot { position: relative; height: 200px; display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 10px; align-items: end; border-bottom: 1px solid var(--line); }
+.plot .gl { position: absolute; left: 0; right: 0; height: 1px; background: var(--grid); }
+.col { position: relative; height: 100%; display: flex; align-items: flex-end; justify-content: center; }
+.col .bar { position: relative; width: min(42px, 100%); border-radius: 4px 4px 0 0; top: auto; background: var(--series); }
+.col .pct { position: absolute; font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; transform: translateY(-1.4em); }
+.xlabels { grid-column: 2; display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 10px; font-size: 0.75rem; color: var(--muted); text-align: center; padding-top: 6px; line-height: 1.3; }
+.xlabels small { display: block; color: var(--faint); font-variant-numeric: tabular-nums; }
+.tip { position: absolute; pointer-events: none; background: var(--fg); color: var(--bg); font-size: 0.78rem; line-height: 1.4; padding: 6px 9px; border-radius: 6px; max-width: 260px; z-index: 2; }
+.callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; display: grid; gap: 6px; }
+.pairs { display: grid; grid-template-columns: max-content max-content max-content; gap: 4px 14px; font-family: var(--font-mono); font-size: 0.84rem; overflow-x: auto; }
+.pairs .h { font-family: var(--font-body); color: var(--muted); font-size: 0.78rem; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+summary { cursor: pointer; font-weight: 600; }
+.table-wrap { overflow-x: auto; margin-top: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); white-space: nowrap; }
+td.num, th.num { text-align: right; white-space: nowrap; }
+.sev { font-family: var(--font-mono); font-size: 0.75rem; white-space: nowrap; }
+.sev.error { color: var(--critical); } .sev.warning { color: var(--fg); } .sev.info { color: var(--muted); }
+.sev.warning::before { content: ""; display: inline-block; width: 8px; height: 8px; background: var(--warning); border-radius: 2px; margin-right: 5px; }
+pre { background: var(--code-bg); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: 0.82rem; margin: 0; }
+footer { color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--line); padding-top: 16px; }
+@media (max-width: 560px) { .hbars, .axis { grid-template-columns: minmax(0, 9.5rem) minmax(150px, 1fr) 3rem; } }
+@media (prefers-reduced-motion: no-preference) { .bar { transition: filter 0.15s; } .bar:hover { filter: brightness(1.08); } }
+</style>
+<main>
+<header>
+<span class="eyebrow">neurolake audit &middot; October 2026</span>
+<h1>How clean is OpenNeuro's metadata?</h1>
+<p class="lede">I checked the BIDS metadata of 150 randomly sampled OpenNeuro datasets against 21 rules, most taken from the BIDS specification and schema. About half pass without a single warning. Hard errors are uncommon. The weak spot is participant bookkeeping, and a handful of acquisition inconsistencies would quietly trip up a pooled analysis.</p>
+</header>
+<div class="stats">
+<div class="stat"><b>150</b><span>datasets sampled</span></div>
+<div class="stat"><b>6,587</b><span>subjects</span></div>
+<div class="stat"><b>57,382</b><span>data files, 5.61 TB described</span></div>
+<div class="stat"><b>51%</b><span>of raw datasets fully clean</span></div>
+</div>
+<section>
+<h2>Where the problems are</h2>
+<p>Of the 148 raw datasets, 76 (51%) have no warnings or errors, 68 have at least one warning, and 11 (7%) have an error that breaks the standard. Most findings are about consistency across files (participants against data folders, sidecars against each other), which a check of one file at a time can miss.</p>
+<figure>
+<div class="chart"><div class="legend"><span><i style="background:var(--critical)"></i>▲ error: breaks BIDS</span><span><i style="background:var(--warning)"></i>◆ warning: likely to cause trouble</span></div><div class="hbars"><div class="lab"><small>◆</small>No participants.tsv</div><div class="track"><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="bar warning" style="width:94.50%" tabindex="0" data-tip="No participants.tsv: 28 of 148 datasets (18.9%), 28 findings" aria-label="No participants.tsv: 28 of 148 datasets (18.9%), 28 findings"></span></div><div class="val">18.9%</div><div class="lab"><small>◆</small>Recommended sidecar field missing</div><div class="track"><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="bar warning" style="width:88.00%" tabindex="0" data-tip="Recommended sidecar field missing: 26 of 148 datasets (17.6%), 781 findings" aria-label="Recommended sidecar field missing: 26 of 148 datasets (17.6%), 781 findings"></span></div><div class="val">17.6%</div><div class="lab"><small>◆</small>Listed participant has no data</div><div class="track"><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="bar warning" style="width:34.00%" tabindex="0" data-tip="Listed participant has no data: 10 of 148 datasets (6.8%), 246 findings" aria-label="Listed participant has no data: 10 of 148 datasets (6.8%), 246 findings"></span></div><div class="val">6.8%</div><div class="lab"><small>◆</small>Sampling rates differ within a task</div><div class="track"><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="bar warning" style="width:20.50%" tabindex="0" data-tip="Sampling rates differ within a task: 6 of 148 datasets (4.1%), 9 findings" aria-label="Sampling rates differ within a task: 6 of 148 datasets (4.1%), 9 findings"></span></div><div class="val">4.1%</div><div class="lab"><small>▲</small>participant_id lacks sub- prefix</div><div class="track"><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="bar error" style="width:17.00%" tabindex="0" data-tip="participant_id lacks sub- prefix: 5 of 148 datasets (3.4%), 5 findings" aria-label="participant_id lacks sub- prefix: 5 of 148 datasets (3.4%), 5 findings"></span></div><div class="val">3.4%</div><div class="lab"><small>◆</small>Subject missing from participants.tsv</div><div class="track"><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="bar warning" style="width:17.00%" tabindex="0" data-tip="Subject missing from participants.tsv: 5 of 148 datasets (3.4%), 58 findings" aria-label="Subject missing from participants.tsv: 5 of 148 datasets (3.4%), 58 findings"></span></div><div class="val">3.4%</div><div class="lab"><small>◆</small>TRs differ within a task</div><div class="track"><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="bar warning" style="width:17.00%" tabindex="0" data-tip="TRs differ within a task: 5 of 148 datasets (3.4%), 9 findings" aria-label="TRs differ within a task: 5 of 148 datasets (3.4%), 9 findings"></span></div><div class="val">3.4%</div><div class="lab"><small>◆</small>.bidsignore matches core files</div><div class="track"><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="bar warning" style="width:17.00%" tabindex="0" data-tip=".bidsignore matches core files: 5 of 148 datasets (3.4%), 5 findings" aria-label=".bidsignore matches core files: 5 of 148 datasets (3.4%), 5 findings"></span></div><div class="val">3.4%</div><div class="lab"><small>▲</small>Required sidecar field missing</div><div class="track"><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="bar error" style="width:13.50%" tabindex="0" data-tip="Required sidecar field missing: 4 of 148 datasets (2.7%), 1,130 findings" aria-label="Required sidecar field missing: 4 of 148 datasets (2.7%), 1,130 findings"></span></div><div class="val">2.7%</div><div class="lab"><small>▲</small>Fieldmap points at a missing run</div><div class="track"><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="bar error" style="width:3.50%" tabindex="0" data-tip="Fieldmap points at a missing run: 1 of 148 datasets (0.7%), 32 findings" aria-label="Fieldmap points at a missing run: 1 of 148 datasets (0.7%), 32 findings"></span></div><div class="val">0.7%</div><div class="lab"><small>▲</small>Malformed TSV row</div><div class="track"><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="bar error" style="width:3.50%" tabindex="0" data-tip="Malformed TSV row: 1 of 148 datasets (0.7%), 1 findings" aria-label="Malformed TSV row: 1 of 148 datasets (0.7%), 1 findings"></span></div><div class="val">0.7%</div><div class="lab"><small>▲</small>Duplicate participant_id</div><div class="track"><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="bar error" style="width:3.50%" tabindex="0" data-tip="Duplicate participant_id: 1 of 148 datasets (0.7%), 1 findings" aria-label="Duplicate participant_id: 1 of 148 datasets (0.7%), 1 findings"></span></div><div class="val">0.7%</div><div class="lab"><small>◆</small>.bidsignore hides all data</div><div class="track"><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="bar warning" style="width:3.50%" tabindex="0" data-tip=".bidsignore hides all data: 1 of 148 datasets (0.7%), 1 findings" aria-label=".bidsignore hides all data: 1 of 148 datasets (0.7%), 1 findings"></span></div><div class="val">0.7%</div><div class="lab"><small>◆</small>Two sidecars apply at one level</div><div class="track"><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="bar warning" style="width:3.50%" tabindex="0" data-tip="Two sidecars apply at one level: 1 of 148 datasets (0.7%), 11 findings" aria-label="Two sidecars apply at one level: 1 of 148 datasets (0.7%), 11 findings"></span></div><div class="val">0.7%</div><div class="lab"><small>◆</small>scans.tsv lists a missing file</div><div class="track"><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="bar warning" style="width:3.50%" tabindex="0" data-tip="scans.tsv lists a missing file: 1 of 148 datasets (0.7%), 24 findings" aria-label="scans.tsv lists a missing file: 1 of 148 datasets (0.7%), 24 findings"></span></div><div class="val">0.7%</div></div><div class="axis"><div></div><div class="ticks"><span style="left:0.00%">0%</span><span style="left:25.00%">5%</span><span style="left:50.00%">10%</span><span style="left:75.00%">15%</span><span style="left:100.00%">20%</span></div><div></div></div></div>
+<figcaption>Share of the 148 raw datasets with at least one finding per rule. A dataset can appear under several rules. Informational findings are left out (they are in the table). Hover or focus a bar for counts.</figcaption>
+</figure>
+<details><summary>All rules as a table</summary><div class="table-wrap"><table><thead><tr><th>Severity</th><th>Rule</th><th class="num">Datasets</th><th class="num">Share</th><th class="num">Findings</th><th>What it checks</th></tr></thead><tbody><tr><td><span class="sev error">error</span></td><td>participant_id lacks sub- prefix<br><span class="mono" style="color:var(--faint)">participant_id_without_prefix</span></td><td class="num">5</td><td class="num">3.4%</td><td class="num">5</td><td>participant_id values in participants.tsv lack the required sub- prefix</td></tr><tr><td><span class="sev error">error</span></td><td>Required sidecar field missing<br><span class="mono" style="color:var(--faint)">missing_required_sidecar_field</span></td><td class="num">4</td><td class="num">2.7%</td><td class="num">1,130</td><td>A field the BIDS schema marks REQUIRED for this datatype is not set by any applicable sidecar (skipped when a sidecar was not fetched)</td></tr><tr><td><span class="sev error">error</span></td><td>Fieldmap points at a missing run<br><span class="mono" style="color:var(--faint)">fieldmap_intended_for_missing_target</span></td><td class="num">1</td><td class="num">0.7%</td><td class="num">32</td><td>A fieldmap IntendedFor entry points at a file that does not exist</td></tr><tr><td><span class="sev error">error</span></td><td>Malformed TSV row<br><span class="mono" style="color:var(--faint)">malformed_tsv_row</span></td><td class="num">1</td><td class="num">0.7%</td><td class="num">1</td><td>A TSV row has a different number of columns than its header</td></tr><tr><td><span class="sev error">error</span></td><td>Duplicate participant_id<br><span class="mono" style="color:var(--faint)">duplicate_participant_id</span></td><td class="num">1</td><td class="num">0.7%</td><td class="num">1</td><td>The same participant_id appears on more than one participants.tsv row</td></tr><tr><td><span class="sev warning">warning</span></td><td>No participants.tsv<br><span class="mono" style="color:var(--faint)">missing_participants_tsv</span></td><td class="num">28</td><td class="num">18.9%</td><td class="num">28</td><td>The dataset has subjects but no participants.tsv</td></tr><tr><td><span class="sev warning">warning</span></td><td>Recommended sidecar field missing<br><span class="mono" style="color:var(--faint)">missing_recommended_sidecar_field</span></td><td class="num">26</td><td class="num">17.6%</td><td class="num">781</td><td>A field the BIDS schema marks RECOMMENDED for this datatype is not set by any applicable sidecar</td></tr><tr><td><span class="sev warning">warning</span></td><td>Listed participant has no data<br><span class="mono" style="color:var(--faint)">participant_without_data</span></td><td class="num">10</td><td class="num">6.8%</td><td class="num">246</td><td>A participants.tsv row has no data files in the snapshot</td></tr><tr><td><span class="sev warning">warning</span></td><td>Sampling rates differ within a task<br><span class="mono" style="color:var(--faint)">inconsistent_sampling_frequency</span></td><td class="num">6</td><td class="num">4.1%</td><td class="num">9</td><td>EEG/MEG/iEEG recordings of the same task and acquisition use SamplingFrequency values more than 0.5% apart</td></tr><tr><td><span class="sev warning">warning</span></td><td>Subject missing from participants.tsv<br><span class="mono" style="color:var(--faint)">subject_missing_from_participants</span></td><td class="num">5</td><td class="num">3.4%</td><td class="num">58</td><td>A subject has data files but no row in participants.tsv</td></tr><tr><td><span class="sev warning">warning</span></td><td>TRs differ within a task<br><span class="mono" style="color:var(--faint)">inconsistent_repetition_time</span></td><td class="num">5</td><td class="num">3.4%</td><td class="num">9</td><td>BOLD runs of the same task and acquisition use RepetitionTime values more than 0.5% apart</td></tr><tr><td><span class="sev warning">warning</span></td><td>.bidsignore matches core files<br><span class="mono" style="color:var(--faint)">bidsignore_matches_core_files</span></td><td class="num">5</td><td class="num">3.4%</td><td class="num">5</td><td>A .bidsignore pattern also matches core files such as dataset_description.json (they were kept)</td></tr><tr><td><span class="sev warning">warning</span></td><td>.bidsignore hides all data<br><span class="mono" style="color:var(--faint)">bidsignore_hides_all_data</span></td><td class="num">1</td><td class="num">0.7%</td><td class="num">1</td><td>.bidsignore covers every data file, so the dataset&#x27;s data escapes all checks</td></tr><tr><td><span class="sev warning">warning</span></td><td>Two sidecars apply at one level<br><span class="mono" style="color:var(--faint)">ambiguous_sidecar_inheritance</span></td><td class="num">1</td><td class="num">0.7%</td><td class="num">11</td><td>More than one sidecar applies to a data file at the same folder level (BIDS 1.7.0 and later forbid this)</td></tr><tr><td><span class="sev warning">warning</span></td><td>scans.tsv lists a missing file<br><span class="mono" style="color:var(--faint)">scans_tsv_missing_file</span></td><td class="num">1</td><td class="num">0.7%</td><td class="num">24</td><td>A scans.tsv row references a file that does not exist</td></tr><tr><td><span class="sev info">info</span></td><td>Two sidecars apply at one level<br><span class="mono" style="color:var(--faint)">ambiguous_sidecar_inheritance</span></td><td class="num">2</td><td class="num">1.4%</td><td class="num">28</td><td>More than one sidecar applies to a data file at the same folder level (BIDS 1.7.0 and later forbid this)</td></tr><tr><td><span class="sev info">info</span></td><td>Metadata not fetched (annexed)<br><span class="mono" style="color:var(--faint)">metadata_not_fetched</span></td><td class="num">1</td><td class="num">0.7%</td><td class="num">421</td><td>A metadata file is stored in git-annex and its content was not fetched during ingest</td></tr></tbody></table></div></details>
+</section>
+<section>
+<h2>Participants are the weak spot</h2>
+<p>28 datasets (19%) have no <code>participants.tsv</code> at all. The file is only RECOMMENDED by BIDS, but without it age, sex and group are simply not available to anyone reusing the data. Where the file does exist, 10 datasets list people with no data in the release, 5 have data folders for subjects the table never mentions, and 5 write <code>participant_id</code> without the required <code>sub-</code> prefix.</p>
+<p>Small formatting slips are enough to break a join. In <code>ds004226</code> the two sides differ only in zero padding. In <code>ds001838</code> the table also drops the prefix, so its unpadded IDs match nothing:</p>
+<div class="pairs"><div class="h">dataset</div><div class="h">participants.tsv says</div><div class="h">data folders are</div><div>ds001838</div><div>1, 2, 3</div><div>sub-01, sub-02, sub-04</div><div>ds004226</div><div>sub-1, sub-2, sub-3</div><div>sub-001, sub-002, sub-003</div></div>
+</section>
+<section>
+<h2>Hard errors are uncommon and concentrated</h2>
+<p>All errors come from 11 datasets. In 4 of them the only error is the missing <code>sub-</code> prefix above. The rest:</p>
+<ul>
+<li><code>ds004166</code>: 213 EEG recordings with no sidecar at all, so fields BIDS requires (sampling rate, power-line frequency, task name) are undefined.</li>
+<li><code>ds004348</code>: 9 EEG recordings with no sidecar at all, so fields BIDS requires (sampling rate, power-line frequency, task name) are undefined.</li>
+<li><code>ds006833</code>: 32 fieldmap <code>IntendedFor</code> entries point at runs that are not in the dataset.</li>
+<li><code>ds005065</code>: 3 MEG recordings with no sidecar at all, so fields BIDS requires (sampling rate, power-line frequency, task name) are undefined.</li>
+<li><code>ds005697</code>: its one EEG sidecar is misnamed (<code>sub-16task-...</code>, missing an underscore), so no sidecar applies to the recording.</li>
+<li><code>ds001541</code>: participant IDs without the prefix, and the same participant listed on several rows.</li>
+<li><code>ds003012</code>: a <code>participants.tsv</code> row with a trailing tab, one column more than the header.</li>
+</ul>
+<p>Each of these is cheap to fix and expensive to discover late, which is the case for checking metadata in a pipeline rather than at analysis time.</p>
+</section>
+<section>
+<h2>Same task, different acquisition</h2>
+<p>11 datasets mix acquisition parameters within a single task and acquisition label: repetition times for fMRI, or sampling rates for EEG, MEG and iEEG (differences under 0.5% are ignored as rounding). None of this breaks BIDS, and much of it is deliberate. Multi-site and clinical recordings vary by scanner or hospital. It still matters, because a pipeline that reads one TR or one sampling rate per task will be wrong for some runs.</p>
+<p>The largest spread is in <code>ds005003</code>, where resting-state runs use 12 different TRs (2.16 to 3.53 s). In the iEEG dataset <code>ds005522</code>, recordings of a single task range from 500 to 2000 Hz.</p>
+</section>
+<section>
+<h2>.bidsignore files that ignore too much</h2>
+<p>A <code>.bidsignore</code> tells the validator which files to skip. In 5 datasets a pattern also matches core files such as the README or the dataset description. neurolake never ignores core files and reports the pattern instead.</p>
+<ul>
+<li><code>ds004103</code> ends its ignore file with <code>*</code>, which matches every file. All of its data sits outside the checks, so it is reported once rather than counted as participants with no data.</li>
+<li><code>ds006833</code> uses <code>**/*dat*</code>, which also matches <code>dataset_description.json</code>.</li>
+</ul>
+</section>
+<section>
+<h2>Are newer datasets cleaner?</h2>
+<p>Datasets whose latest snapshot is from 2024 or later are clean 61% of the time (47 of 77), against 41% for older ones (29 of 71). Fisher's exact test gives p = 0.02, but treat that as suggestive. An earlier version of the rules gave p = 0.07 on the same sample, so the result depends on which rules count, and a snapshot's year is when the dataset was last updated, not first published. The share without <code>participants.tsv</code> falls too (p = 0.06).</p>
+<figure>
+<div class="chart"><div class="cols" style="--n:8"><div class="yaxis"><span style="bottom:0%">0%</span><span style="bottom:25%">25%</span><span style="bottom:50%">50%</span><span style="bottom:75%">75%</span><span style="bottom:100%">100%</span></div><div class="plot" style="--n:8"><span class="gl" style="bottom:25%"></span><span class="gl" style="bottom:50%"></span><span class="gl" style="bottom:75%"></span><span class="gl" style="bottom:100%"></span><div class="col"><span class="pct" style="bottom:13.3%">13%</span><span class="bar" style="height:13.3%" tabindex="0" data-tip="2019 and earlier: 2 of 15 datasets clean (13%)" aria-label="2019 and earlier: 2 of 15 datasets clean (13%)"></span></div><div class="col"><span class="pct" style="bottom:33.3%">33%</span><span class="bar" style="height:33.3%" tabindex="0" data-tip="2020: 5 of 15 datasets clean (33%)" aria-label="2020: 5 of 15 datasets clean (33%)"></span></div><div class="col"><span class="pct" style="bottom:50.0%">50%</span><span class="bar" style="height:50.0%" tabindex="0" data-tip="2021: 7 of 14 datasets clean (50%)" aria-label="2021: 7 of 14 datasets clean (50%)"></span></div><div class="col"><span class="pct" style="bottom:35.3%">35%</span><span class="bar" style="height:35.3%" tabindex="0" data-tip="2022: 6 of 17 datasets clean (35%)" aria-label="2022: 6 of 17 datasets clean (35%)"></span></div><div class="col"><span class="pct" style="bottom:90.0%">90%</span><span class="bar" style="height:90.0%" tabindex="0" data-tip="2023: 9 of 10 datasets clean (90%)" aria-label="2023: 9 of 10 datasets clean (90%)"></span></div><div class="col"><span class="pct" style="bottom:68.0%">68%</span><span class="bar" style="height:68.0%" tabindex="0" data-tip="2024: 17 of 25 datasets clean (68%)" aria-label="2024: 17 of 25 datasets clean (68%)"></span></div><div class="col"><span class="pct" style="bottom:67.7%">68%</span><span class="bar" style="height:67.7%" tabindex="0" data-tip="2025: 21 of 31 datasets clean (68%)" aria-label="2025: 21 of 31 datasets clean (68%)"></span></div><div class="col"><span class="pct" style="bottom:42.9%">43%</span><span class="bar" style="height:42.9%" tabindex="0" data-tip="2026: 9 of 21 datasets clean (43%)" aria-label="2026: 9 of 21 datasets clean (43%)"></span></div></div><div class="xlabels" style="--n:8"><div>2019 and earlier<small>n=15</small></div><div>2020<small>n=15</small></div><div>2021<small>n=14</small></div><div>2022<small>n=17</small></div><div>2023<small>n=10</small></div><div>2024<small>n=25</small></div><div>2025<small>n=31</small></div><div>2026<small>n=21</small></div></div></div></div>
+<figcaption>Share of raw datasets with no warnings or errors, by the year of their latest snapshot. Each bar is labelled with the number of datasets in that year.</figcaption>
+</figure>
+</section>
+<section>
+<h2>How this was done</h2>
+<ul>
+<li><b>Sample.</b> Accessions ds000001 to ds007500 were shuffled with a fixed seed (2026) and probed in that order against OpenNeuro's DataLad mirrors on GitHub. The sample is the first 150 with a snapshot tag (650 probes). Every probe is logged, transient errors are retried rather than counted as missing, and the same seed reproduces the same list. The median dataset has 28 subjects (middle half 17 to 52, largest 608).</li>
+<li><b>Data.</b> Each dataset's latest snapshot was shallow-cloned. Metadata files live in git, while imaging data stays as git-annex pointers whose keys carry the file size, so no imaging bytes were downloaded.</li>
+<li><b>Rules.</b> Sidecar field levels come from the BIDS schema, and the inheritance principle follows the specification text, including the rule that only one sidecar may apply per folder level. That rule is reported as informational for datasets declaring a version before 1.7.0, when the inheritance principle was rewritten. The TR, sampling-rate and <code>.bidsignore</code> rules are heuristics of my own. <code>.bidsignore</code> is honoured, and derivative datasets only get file-integrity checks.</li>
+<li><b>Checks on the checker.</b> Running on real data exposed false positives in the first version. 8 such patterns are now test fixtures that must never be flagged. An independent pass then reproduced the sample and every headline number from scratch, and checked 14 findings against the raw files. All 14 were real. It corrected one description and found one <code>.bidsignore</code> artifact, both fixed here, and found no missed violations in five clean datasets.</li>
+</ul>
+<div class="callout"><b>Limits</b>
+<p>This covers 150 of roughly 1,500 to 2,000 mirrored datasets, and only each one's latest snapshot. The rules cover the metadata problems that most often break reuse, not the whole specification, so this complements the official validator rather than replacing it. Metadata stored in git-annex was not fetched, and the affected files are marked unknown rather than missing.</p></div>
+</section>
+<section>
+<h2>Reproduce it</h2>
+<pre><code>pip install -e .
+neurolake discover-mirrors --sample 150 --max-id 7500 --seed 2026 \
+    --log-file audit/probe_log.csv &gt; audit/sample_ids.txt
+neurolake ingest-mirror --from-file audit/sample_ids.txt --lake data/audit
+neurolake transform --lake data/audit
+python audit/analyze.py data/audit
+python audit/render.py</code></pre>
+<p>Code, rules and tests: <a href="https://github.com/pearlfranz20/neurolake">github.com/pearlfranz20/neurolake</a>.</p>
+</section>
+<footer>By Pearl Franz. Data from OpenNeuro (openneuro.org) via the OpenNeuroDatasets mirrors. Every chart and count on this page is generated from <span class="mono">audit/findings.json</span>.</footer>
+</main>
+<script>
+(() => {
+  const tip = document.createElement('div');
+  tip.className = 'tip'; tip.hidden = true; tip.setAttribute('role', 'status');
+  let host = null;
+  function show(el) {
+    const chart = el.closest('.chart'); if (!chart) return;
+    if (host !== chart) { chart.appendChild(tip); host = chart; }
+    tip.textContent = el.dataset.tip; tip.hidden = false;
+    const c = chart.getBoundingClientRect(), r = el.getBoundingClientRect();
+    let x = r.left - c.left + chart.scrollLeft + r.width / 2 - tip.offsetWidth / 2;
+    x = Math.max(4, Math.min(x, chart.scrollWidth - tip.offsetWidth - 4));
+    tip.style.left = x + 'px';
+    tip.style.top = (r.top - c.top - tip.offsetHeight - 8) + 'px';
+  }
+  const hide = () => { tip.hidden = true; };
+  document.querySelectorAll('[data-tip]').forEach(el => {
+    el.addEventListener('mouseenter', () => show(el));
+    el.addEventListener('mouseleave', hide);
+    el.addEventListener('focus', () => show(el));
+    el.addEventListener('blur', hide);
+  });
+})();
+</script>

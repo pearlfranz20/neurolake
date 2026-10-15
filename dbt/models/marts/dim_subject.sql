@@ -15,6 +15,14 @@ with_data as (
         sum(size_bytes) as total_bytes
     from {{ ref('fct_scan') }}
     group by all
+),
+
+-- subjects whose files exist but are all covered by .bidsignore: they have data,
+-- it is just outside the checks
+ignored_data as (
+    select distinct dataset_id, subject_label
+    from {{ ref('stg_files') }}
+    where is_bidsignored and subject_label is not null and datatype is not null
 )
 
 select
@@ -27,6 +35,7 @@ select
     p.participant_group,
     p.subject_label is not null as in_participants_tsv,
     d.subject_label is not null as has_data,
+    i.subject_label is not null and d.subject_label is null as has_only_ignored_data,
     coalesce(d.n_scans, 0) as n_scans,
     coalesce(d.n_sessions, 0) as n_sessions,
     coalesce(d.datatypes, []) as datatypes,
@@ -36,3 +45,6 @@ from participants as p
 full outer join with_data as d
     on p.dataset_id = d.dataset_id
     and p.subject_label = d.subject_label
+left join ignored_data as i
+    on i.dataset_id = coalesce(p.dataset_id, d.dataset_id)
+    and i.subject_label = coalesce(p.subject_label, d.subject_label)

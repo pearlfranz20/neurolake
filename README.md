@@ -1,12 +1,26 @@
 # neurolake
 
-A small lakehouse for neuroimaging metadata. It pulls [BIDS](https://bids.neuroimaging.io) datasets from [OpenNeuro](https://openneuro.org) (or a local folder), lands them as raw Parquet, models them with dbt on DuckDB, and produces a data-quality report that tells you whether a dataset is ready to analyse.
+A small lakehouse for neuroimaging metadata. It pulls [BIDS](https://bids.neuroimaging.io) datasets from [OpenNeuro](https://openneuro.org) (or a local folder), lands them as raw Parquet, models them with dbt on DuckDB, and flags the metadata problems that break reuse.
 
-Only metadata moves through the pipeline: file listings, `participants.tsv`, `*_scans.tsv` and JSON sidecars. Imaging payloads are listed with their sizes and never downloaded, so a 200 GB dataset ingests in seconds.
+Only metadata moves through the pipeline: file listings, `participants.tsv`, `*_scans.tsv` and JSON sidecars. Imaging data is never downloaded. From OpenNeuro's DataLad mirrors, file sizes come from git-annex keys, so a multi-terabyte dataset ingests in seconds.
+
+## OpenNeuro audit
+
+[**How clean is OpenNeuro's metadata?**](docs/index.html) runs neurolake over a reproducible random sample of 150 OpenNeuro datasets (6,587 subjects, 57,382 data files, 5.6 TB described):
+
+- 51% of raw datasets pass every rule. 7% have an error that breaks BIDS.
+- Participant bookkeeping is the weak spot: 19% have no `participants.tsv`, and some tables disagree with the data folders on ID format (`sub-1` against `sub-001`, or no `sub-` prefix at all).
+- 11 datasets mix TRs or sampling rates within one task, which matters for any pipeline that assumes one value per task.
+- A `.bidsignore` can hide more than intended. One dataset's `*` ignores every file, and another's `**/*dat*` matches `dataset_description.json`.
+
+Every number comes from `audit/findings.json`, produced by `audit/analyze.py`. `make audit` reruns the whole thing, and the same seed draws the same sample. The rules were checked against the BIDS schema, and the findings were verified independently against the raw files (see the method section of the page).
+
+## Architecture
 
 ```mermaid
 flowchart LR
   subgraph Sources
+    GH[OpenNeuro DataLad mirrors on GitHub]
     ON[OpenNeuro GraphQL + file API]
     LB[Local BIDS folder]
   end
@@ -18,14 +32,15 @@ flowchart LR
     RI[raw_ingest_runs]
   end
   subgraph dbt["dbt on DuckDB"]
-    STG[staging: path parsing, typing, current snapshot]
+    STG[staging: path parsing, typing, current run]
     INT[intermediate: sidecar inheritance, fieldmap targets]
     MART[marts: dim_dataset, dim_subject, fct_scan, fct_dq_issue, quality + acquisition marts]
   end
+  GH --> Bronze
   ON --> Bronze
   LB --> Bronze
-  Bronze --> STG --> INT --> MART --> REP[HTML QC report]
-  AF[Airflow DAG, weekly] -. orchestrates .-> ON
+  Bronze --> STG --> INT --> MART --> REP[HTML QC report and audit]
+  AF[Airflow DAG, weekly] -. orchestrates .-> GH
   AF -.-> dbt
   AF -.-> REP
 ```
@@ -35,25 +50,27 @@ flowchart LR
 ```bash
 pip install -e ".[dev]"
 
-neurolake demo                        # offline: synthetic fixtures -> report in data/report.html
-make openneuro                        # real data: ds000001, ds000117, ds002718
-neurolake ingest-openneuro ds000248   # any public accession, latest snapshot
+neurolake demo                              # offline: synthetic fixtures -> data/report.html
+neurolake ingest-mirror ds000117 ds002718   # real OpenNeuro data via the GitHub mirrors
+neurolake transform && neurolake report     # build, test, report
+neurolake discover-mirrors --sample 50      # a reproducible random sample of accessions
 neurolake ingest-local ~/data/ds000117 --snapshot 1.1.0
-pytest -q                             # unit, mocked-API and end-to-end tests
-make docs                             # dbt docs site with the lineage graph
+make audit                                  # regenerate the OpenNeuro audit
+pytest -q                                   # unit, mocked-API and end-to-end tests
+make docs                                   # dbt docs site with the lineage graph
 ```
 
 ## What it models
 
-**The BIDS inheritance principle.** A data file's metadata is the merge of every JSON sidecar with the same suffix that sits in its folder or any parent folder and whose entities are a subset of the file's own. `int_effective_sidecars` resolves this in SQL. Every `key-value` pair in a filename is parsed into an entity list, candidate sidecars are joined on folder ancestry and `list_has_all`, ordered from the dataset root down, and folded with `json_merge_patch` so the closest, most specific file wins. Matching uses all entities, so the two inversions of an MP2RAGE (`inv-1`, `inv-2`) each keep their own `InversionTime`. This is where acquisition mismatches hide, because a top-level `task-nback_bold.json` can say `RepetitionTime: 2.0` while one run overrides it to `1.5`.
+**The BIDS inheritance principle.** A data file's metadata is the merge of every JSON sidecar with the same suffix that sits in its folder or a parent folder and whose entities are a subset of the file's own. `int_effective_sidecars` resolves this in SQL. Every `key-value` pair in a filename is parsed into an entity list, candidate sidecars are joined on folder ancestry and `list_has_all`, ordered from the dataset root down, and folded with `json_merge_patch` so the closest file wins. Matching uses all entities, so the two inversions of an MP2RAGE (`inv-1`, `inv-2`) each keep their own `InversionTime`. Each merged document is parsed once: some real datasets carry sidecars of several hundred KB, and repeated extraction exhausted memory.
 
-**Subjects from both sides.** `dim_subject` is a full outer join of `participants.tsv` and the subjects that actually have data, with flags for each side, so a subject missing from either one stays queryable instead of being dropped.
+**Subjects from both sides.** `dim_subject` is a full outer join of `participants.tsv` and the subjects that have data, with a flag for each side, so a subject missing from either stays queryable. Subjects whose data is all covered by `.bidsignore` count as having data.
 
-**Runs and snapshots.** Each ingest stages all five bronze tables outside the read path, then swaps them into its own `(dataset_id, snapshot)` partition with `raw_ingest_runs` last, under a per-dataset lock. Every bronze row carries its `run_id`, and staging reads only rows from each dataset's latest run, so a crash halfway through publishing can never mix two runs. Re-runs and Airflow retries are idempotent, and a singular test asserts the marts never mix snapshots.
+**Runs and snapshots.** Each ingest stages all five bronze tables outside the read path, then swaps them into its own `(dataset_id, snapshot)` partition with `raw_ingest_runs` last, under a per-dataset lock. Every bronze row carries its `run_id`, and staging reads only rows from each dataset's latest run, so a crash halfway through publishing never mixes two runs.
 
-**Failures.** A metadata file whose content is unusable (bad encoding, 404, unfetched annex content) is recorded in `raw_read_errors` and reported as a quality issue. A network or API failure that outlasts the retries fails the run and leaves the previous data in place, so Airflow can retry it.
+**Failures.** A metadata file whose content is unusable (bad encoding, missing) is recorded in `raw_read_errors` and reported as a quality issue. Content that sits in git-annex and was not fetched is marked unknown rather than missing, and checks that depend on it are skipped. A network failure that outlasts the retries fails the run and leaves the previous data in place.
 
-**Folder formats.** CTF MEG (`.ds`) and MEF3 iEEG (`.mefd`) recordings are folders. Each one is collapsed into a single data file whose size is the sum of its contents.
+**Real-world BIDS.** `.bidsignore` is applied with gitignore semantics, but never to core files such as `dataset_description.json`. CTF (`.ds`) and MEF3 (`.mefd`) recordings are folders and count as one data file. MEGIN calibration files are not recordings. `stimuli/` is not validated. Derivative datasets only get file-integrity checks.
 
 | Model | Grain |
 | --- | --- |
@@ -66,35 +83,28 @@ make docs                             # dbt docs site with the lineage graph
 
 ## Data-quality rules
 
-Rules live in `fct_dq_issue`, one CTE each, and are catalogued in `seeds/dq_rules.csv`. Required sidecar fields per datatype come from `seeds/required_sidecar_fields.csv`, so adding a check for a new modality is a one-line seed change.
+Rules live in `fct_dq_issue`, one CTE each, and are catalogued in `seeds/dq_rules.csv`. Sidecar field levels come from `seeds/required_sidecar_fields.csv`, which cites the [BIDS schema](https://github.com/bids-standard/bids-specification/tree/master/src/schema/rules/sidecars) rule behind each row. Adding a field check is a one-line seed change.
 
-- subject has data but no `participants.tsv` row, or the reverse
-- BOLD runs of one task and acquisition with different `RepetitionTime`
-- EEG/MEG/iEEG recordings of one task and acquisition with different `SamplingFrequency`
-- required sidecar fields not set by any applicable sidecar
-- more than one sidecar applying at the same folder level
-- fieldmap `IntendedFor` pointing at a file that does not exist (BIDS URIs and the older subject-relative form)
-- invalid JSON, malformed TSV rows, unreadable metadata files (JSON or TSV)
-- `dataset_description.json` missing or without `Name` / `BIDSVersion`
-- `scans.tsv` rows referencing missing files, data files with unknown size
+- **Participants:** no `participants.tsv`, IDs without the `sub-` prefix, duplicate IDs, subjects on only one side of the table/data join
+- **Sidecars:** REQUIRED fields missing (error) and RECOMMENDED ones (warning), with alternatives such as `RepetitionTime` or `VolumeTiming`, more than one sidecar applying at one folder level
+- **Acquisition:** TRs or sampling rates more than 0.5% apart within one task and acquisition, BOLD TRs that look like milliseconds
+- **References:** fieldmap `IntendedFor` and `scans.tsv` entries pointing at files that do not exist
+- **Files:** invalid JSON, malformed TSV rows, unreadable files, subject folders not at the root, a missing or incomplete `dataset_description.json`, `.bidsignore` patterns that match core files or every data file
 
 ## Testing
 
-- **dbt:** every build runs schema tests (keys, relationships, accepted values, value ranges), two singular tests and three dbt unit tests: BIDS path parsing with stale-run filtering, sidecar override order with entity matching, and same-level ambiguity.
-- **pytest:** TSV parsing edge cases, idempotent re-ingest, read errors recorded versus outages failing the run, the OpenNeuro client against a mocked API (tree walk, retries on 429 and 5xx with `Retry-After`, path mapping, 404 handling, GraphQL errors), and an end-to-end run that asserts every defect injected by `neurolake.fixtures` is detected, nothing else raises an error, and MP2RAGE and CTF data resolve correctly.
+- **dbt:** every build runs schema tests (keys, relationships, accepted values), two singular tests and three dbt unit tests covering path parsing with stale-run filtering, sidecar override order with entity matching, and same-level ambiguity. Data defects become issue rows, never test failures, so one messy dataset cannot block the rest.
+- **pytest:** TSV parsing, idempotent re-ingest, read errors recorded versus outages failing the run, the OpenNeuro API client against a mock, and an end-to-end run over synthetic datasets. That run asserts that every injected defect is detected and that each real-world false positive found during the audit (`MUST_NOT_FLAG` in `neurolake/fixtures.py`) stays quiet.
 - **CI:** lint, tests and a demo run on Python 3.11 and 3.13, the QC report uploaded as a build artifact, and an Airflow 3 job that checks the DAG imports.
-
-Reversing the inheritance order in `int_effective_sidecars` fails the build, which is the kind of regression the suite is meant to catch.
 
 ## Orchestration
 
-`dags/neurolake_openneuro.py` runs weekly: one dynamically mapped ingest task per dataset (capped at 4 in parallel), then `dbt build`, then the report. The dataset list is a DAG param, de-duplicated so two tasks never ingest the same dataset, and a manual run can target any accessions. It uses the Airflow 3 `airflow.sdk` API and falls back to the 2.x imports. `make airflow` starts a local standalone instance.
+`dags/neurolake_openneuro.py` runs weekly: one dynamically mapped ingest task per dataset (at most 4 in parallel) from the GitHub mirrors, then `dbt build`, then the report. The dataset list is a DAG param, de-duplicated so two tasks never ingest the same dataset. It uses the Airflow 3 `airflow.sdk` API and falls back to the 2.x imports. `make airflow` starts a local standalone instance.
 
-## Status and limits
+## Limits
 
-- The OpenNeuro client follows the documented GraphQL API (`snapshot.files(tree:)`) and is tested against a mock. It walks the tree one folder per request, which is simple and reliable but slow for datasets with thousands of subjects.
-- `participants.tsv` columns vary between datasets. The model extracts the BIDS-recommended ones (age, sex, handedness, group) and keeps the full row as JSON.
-- Derivatives, `sourcedata/` and `code/` are skipped. They are separate BIDS datasets with their own rules.
+- The OpenNeuro API client (`ingest-openneuro`) follows the documented GraphQL API and is tested against a mock only. The GitHub mirror source is the one exercised on real data.
+- `participants.tsv` columns vary. The model extracts the BIDS-recommended ones (age, sex, handedness, group) and keeps the full row as JSON.
 - `IntendedFor` URIs into other datasets (`bids:<name>:...`) are recorded but not checked.
 - The per-dataset lock uses `fcntl`, so ingest runs on Linux and macOS.
-- This is not a replacement for the official [bids-validator](https://github.com/bids-standard/bids-validator). It covers the metadata problems that most often break pooled analyses and makes them queryable across many datasets at once.
+- This complements the official [bids-validator](https://github.com/bids-standard/bids-validator) rather than replacing it. It covers the problems that most often break pooled analyses, and makes them queryable across many datasets at once.
