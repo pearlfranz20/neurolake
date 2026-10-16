@@ -455,6 +455,7 @@ def build(f: dict, hx: dict | None = None) -> str:
         f'<div class="stat"><b>{fmt(s["data_files"])}</b><span>data files, {s["terabytes"]} TB described</span></div>',
         f'<div class="stat"><b>{pct(h["clean"], n_raw)}</b><span>of raw datasets fully clean</span></div>',
         "</div>",
+        f'<p><a href="datasets/index.html">Browse all {s["datasets"]} datasets</a>, with every finding rule by rule.</p>',
         "<section>",
         "<h2>Where the problems are</h2>",
         f"<p>Of the {n_raw} raw datasets, {h['clean']} ({pct(h['clean'], n_raw)}) have no warnings or errors, "

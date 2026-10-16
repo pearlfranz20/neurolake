@@ -42,6 +42,7 @@ ignore = ["B008"]
 # The report embeds its stylesheet and HTML fragments verbatim.
 "src/neurolake/report.py" = ["E501"]
 "audit/render.py" = ["E501"]
+"audit/datasets.py" = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
