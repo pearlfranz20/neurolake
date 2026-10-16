@@ -48,14 +48,35 @@ def _git(*args: str, timeout: int = 600) -> str:
     return proc.stdout
 
 
-def latest_snapshot_tag(tags: list[str]) -> str | None:
-    """Highest x.y.z tag; for datasets that only have OpenNeuro's early numeric tags
-    (00001, 00002...), the highest of those."""
-    versions = [(tuple(map(int, m.groups())), t) for t in tags if (m := _SEMVER.match(t))]
+def _snapshot_tags(tags: list[str]) -> list[str]:
+    """Snapshot tags oldest first. x.y.z tags when there are any; datasets that only
+    have OpenNeuro's early numeric tags (00001, 00002...) use those. The two families
+    are never mixed, so "first" and "latest" are chosen from the same series."""
+    versions = sorted((tuple(map(int, m.groups())), t) for t in tags if (m := _SEMVER.match(t)))
     if versions:
-        return max(versions)[1]
-    numeric = [t for t in tags if _NUMERIC.match(t)]
-    return max(numeric, key=int) if numeric else None
+        return [t for _, t in versions]
+    return sorted((t for t in tags if _NUMERIC.match(t)), key=int)
+
+
+def latest_snapshot_tag(tags: list[str]) -> str | None:
+    ordered = _snapshot_tags(tags)
+    return ordered[-1] if ordered else None
+
+
+def earliest_snapshot_tag(tags: list[str]) -> str | None:
+    ordered = _snapshot_tags(tags)
+    return ordered[0] if ordered else None
+
+
+def resolve_snapshot(dataset_id: str, snapshot: str | None) -> str:
+    """Turn None/"latest"/"first" into a concrete tag; any other value is used as given."""
+    if snapshot not in (None, "latest", "first"):
+        return snapshot
+    pick = earliest_snapshot_tag if snapshot == "first" else latest_snapshot_tag
+    tag = pick(list_tags(dataset_id))
+    if tag is None:
+        raise MirrorError(f"{dataset_id} has no snapshot tags")
+    return tag
 
 
 def list_tags(dataset_id: str) -> list[str]:
@@ -93,11 +114,7 @@ class GitHubMirrorSource:
 
     def __init__(self, dataset_id: str, snapshot: str | None = None, workdir: str | Path | None = None):
         self.dataset_id = dataset_id
-        if snapshot is None:
-            snapshot = latest_snapshot_tag(list_tags(dataset_id))
-            if snapshot is None:
-                raise MirrorError(f"{dataset_id} has no x.y.z snapshot tags")
-        self.snapshot = snapshot
+        self.snapshot = snapshot = resolve_snapshot(dataset_id, snapshot)
         self._tmp = Path(tempfile.mkdtemp(prefix=f"{dataset_id}-", dir=workdir))
         dest = self._tmp / dataset_id
         log.info("cloning %s@%s", dataset_id, snapshot)

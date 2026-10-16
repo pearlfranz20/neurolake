@@ -1,7 +1,7 @@
 LAKE ?= data/lake
 DATASETS ?= ds000001 ds000117 ds002718
 
-.PHONY: install demo openneuro audit transform report test lint docs airflow clean
+.PHONY: install demo openneuro audit history transform report test lint docs airflow clean
 
 install:            ## editable install with dev tools
 	pip install -e ".[dev]"
@@ -20,6 +20,12 @@ audit:              ## reproduce the OpenNeuro audit in docs/ (about 150 dataset
 	neurolake ingest-mirror --from-file audit/sample_ids.txt --workers 6 --lake data/audit
 	neurolake transform --lake data/audit
 	python audit/analyze.py data/audit
+	python audit/render.py
+
+history:            ## first vs latest snapshot of every audited dataset (run after `make audit`)
+	python audit/history.py pairs
+	python audit/history.py ingest
+	python audit/history.py analyze
 	python audit/render.py
 
 transform:
