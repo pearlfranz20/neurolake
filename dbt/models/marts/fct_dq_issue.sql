@@ -145,7 +145,7 @@ invalid_json as (
 
 duplicate_json_key as (
     select dataset_id, 'duplicate_json_key', 'warning', 'file', path,
-        'key repeated: ' || array_to_string(list_transform(duplicate_keys, k -> substr(k, 3)), ', ')
+        'key repeated: ' || array_to_string(list_transform(duplicate_keys, k -> regexp_replace(k, '^\$\.?', '')), ', ')
         || ' (the last value is used, as most JSON readers do)'
     from {{ ref('stg_json_docs') }}
     where is_valid_json and len(duplicate_keys) > 0

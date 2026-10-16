@@ -58,7 +58,7 @@ SQL = {
         cross join raw
         where i.rule_id not in ('derivative_dataset')
         group by i.rule_id, i.severity, r.description
-        order by case i.severity when 'error' then 0 when 'warning' then 1 else 2 end, datasets desc
+        order by case i.severity when 'error' then 0 when 'warning' then 1 else 2 end, datasets desc, rule_id
     """,
     # Severity by rule: a rule can be error for some fields and warning for others.
     "rule_severity": """

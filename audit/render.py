@@ -30,6 +30,7 @@ LABELS = {
     "scans_tsv_missing_file": "scans.tsv lists a missing file",
     "malformed_tsv_row": "Malformed TSV row",
     "invalid_json": "Invalid JSON",
+    "duplicate_json_key": "Key repeated in a JSON file",
     "metadata_read_error": "Unreadable metadata file",
     "metadata_not_fetched": "Metadata not fetched (annexed)",
     "implausible_repetition_time": "Implausible BOLD TR",
