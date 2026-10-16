@@ -14,7 +14,7 @@ Only metadata moves through the pipeline: file listings, `participants.tsv`, `*_
 - A `.bidsignore` can hide more than intended. One dataset's `*` ignores every file, and another's `**/*dat*` matches `dataset_description.json`.
 - Updates rarely fix metadata. Of the 88 datasets with more than one snapshot, 75 have exactly as many findings in their latest snapshot as in their first. Fully clean moves from 47 to 51, errors stay at 7, and some updates introduce problems: the `*` above arrived in a later snapshot.
 
-[**Every dataset in the audit**](https://pearlfranz20.github.io/neurolake/datasets/) ([source](docs/datasets/index.html)) has a sortable, filterable table of the 150 datasets and one page per dataset with its findings grouped by rule. `make datasets` exports `audit/datasets.json` from the lake and renders the pages from that file alone.
+[**Every dataset in the audit**](https://pearlfranz20.github.io/neurolake/datasets/) ([source](docs/datasets/index.html)) has a sortable, filterable table of the 150 datasets and one page per dataset with its findings grouped by rule. The pages are rendered from the committed `audit/datasets.json` alone, so `make datasets` works on a fresh clone. `make datasets-export` re-exports that file from the lake built by `make history`, then renders.
 
 Every number comes from `audit/findings.json` and `audit/history.json`, produced by `audit/analyze.py` and `audit/history.py`. `make audit` reruns the latest-snapshot audit and `make history` the first-vs-latest comparison, and the same seed draws the same sample. The rules were checked against the BIDS schema, and the findings were verified independently against the raw files (see the method section of the page).
 
