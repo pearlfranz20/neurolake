@@ -239,7 +239,152 @@ def rules_table(rules) -> str:
     )
 
 
-def build(f: dict) -> str:
+def _status(errors: int, warnings: int) -> str:
+    return "errors" if errors else ("warnings only" if warnings else "clean")
+
+
+def history_section(hx: dict) -> list[str]:
+    """Do datasets get cleaner after first publication? From audit/history.json.
+
+    Only first and latest snapshots are compared, so changes are dated "by" the latest
+    snapshot, never "in" it. Every judgement word is guarded by the number behind it."""
+    s = hx["sample"]
+    n = s["cohort"]
+    t = hx["transitions"]
+    cs = hx["changed_summary"]
+    st = {(r["side"], r["status"]): r["datasets"] for r in hx["status"]}
+    first_clean, latest_clean = st.get(("first", "clean"), 0), st.get(("latest", "clean"), 0)
+    first_err, latest_err = st.get(("first", "errors"), 0), st.get(("latest", "errors"), 0)
+    unchanged = n - cs["datasets"]
+    p_sign = hx["sign_test"]["p_two_sided"]
+    top = hx.get("top_resolver")
+    states = ("clean", "warnings only", "errors")
+    grid = {(a, b): 0 for a in states for b in states}
+    for d in hx["datasets"]:
+        grid[
+            (
+                _status(d["first_errors"], d["first_warnings"]),
+                _status(d["latest_errors"], d["latest_warnings"]),
+            )
+        ] += 1
+    head = "".join(f'<th class="num">{e(b)}</th>' for b in states)
+    body = "".join(
+        f"<tr><td>{e(a)}</td>" + "".join(f'<td class="num">{grid[(a, b)]}</td>' for b in states) + "</tr>"
+        for a in states
+    )
+
+    excluded = s["multi_snapshot"] - n
+    cohort_note = (
+        f"all {n} are raw datasets"
+        if not excluded
+        else f"{n} of them are raw datasets (derivatives are left out)"
+    )
+    errors_text = (
+        f"the number with errors is {first_err} at both ends"
+        if first_err == latest_err
+        else f"the number with errors goes from {first_err} to {latest_err}"
+    )
+    chance = (
+        f"which is well within chance (sign test p = {p_sign:.2f})"
+        if p_sign >= 0.2
+        else f"(sign test p = {p_sign:.2f})"
+    )
+    lead = "Updates rarely touch the metadata. " if unchanged >= 0.75 * n else ""
+
+    out = [
+        "<section>",
+        "<h2>Do datasets get cleaner after release?</h2>",
+        f"<p>The year comparison above uses each dataset's latest snapshot, which mixes when a dataset was "
+        f"published with how much it was revised. To separate the two I ran the same rules on the first "
+        f"published snapshot of every dataset in the sample. {s['multi_snapshot']} of the {s['datasets']} "
+        f"have been updated at least once, a median of {s['median_years_between']:g} years apart, and "
+        f"{cohort_note}.</p>",
+        f"<p>{lead}In {unchanged} of the {n} updated datasets every finding is the same in the latest "
+        f"snapshot as in the first. The share that is fully clean moves from {pct(first_clean, n)} to "
+        f"{pct(latest_clean, n)} ({first_clean} to {latest_clean}), and {errors_text}: "
+        f"{t['errors_fixed']} fixed, {t['errors_introduced']} introduced. Datasets that ended with fewer "
+        f"findings outnumber those that ended with more, {t['fewer_issues']} to {t['more_issues']}, "
+        f"{chance}.</p>"
+        if t["fewer_issues"] > t["more_issues"]
+        else f"<p>{lead}In {unchanged} of the {n} updated datasets every finding is the same in the latest "
+        f"snapshot as in the first. The share that is fully clean moves from {pct(first_clean, n)} to "
+        f"{pct(latest_clean, n)}, and {errors_text}. {t['fewer_issues']} datasets ended with fewer findings "
+        f"and {t['more_issues']} with more {chance}.</p>",
+        "<figure>",
+        '<div class="chart"><div class="table-wrap" style="margin-top:0"><table>'
+        f"<thead><tr><th>First snapshot</th>{head}</tr></thead><tbody>{body}</tbody></table></div></div>",
+        f"<figcaption>Status of the {n} updated datasets at their first snapshot (rows) and latest snapshot "
+        "(columns). The diagonal is datasets whose status did not change.</figcaption>",
+        "</figure>",
+    ]
+
+    counts = (
+        f"<p>Counting individual findings tells a different story: {fmt(cs['resolved'])} resolved against "
+        f"{fmt(cs['introduced'])} introduced."
+    )
+    if top and top["resolved"] > cs["resolved"] / 2:
+        tc = next(c for c in hx["changed"] if c["dataset_id"] == top["dataset_id"])
+        k = (
+            str(top["per_object_min"])
+            if top["per_object_min"] == top["per_object_max"]
+            else f"{top['per_object_min']} to {top['per_object_max']}"
+        )
+        if top["rules"] == ["missing_required_sidecar_field"]:
+            detail = (
+                f"{top['objects']} recordings that each lacked {k} required sidecar fields in its first "
+                f"snapshot ({e(tc['first_snapshot'])}) and have them all by {e(tc['latest_snapshot'])}"
+            )
+        else:
+            detail = (
+                f"{top['objects']} files with {k} findings each that are gone by {e(tc['latest_snapshot'])}"
+            )
+        counts += (
+            f" But {fmt(top['resolved'])} of those come from one dataset, <code>{e(top['dataset_id'])}</code>: "
+            f"{detail}."
+        )
+    if cs["data_grew"]:
+        counts += (
+            f" Some improvements are not metadata fixes. In {cs['data_grew']} of the {cs['datasets']} datasets "
+            "whose findings changed, the latest snapshot has at least half again as many data files as the "
+            "first, which points to an unfinished first upload"
+        )
+        k = cs["grew_and_cleared_participant_without_data"]
+        counts += (
+            f", and in {k} of them the gain is listed participants that simply received their data.</p>"
+            if k
+            else ".</p>"
+        )
+    else:
+        counts += "</p>"
+    out.append(counts)
+
+    regress = []
+    for c in hx["changed"]:
+        intro = c["introduced_rules"] or []
+        if "bidsignore_hides_all_data" in intro:
+            regress.append(
+                f"By {e(c['latest_snapshot'])}, <code>{e(c['dataset_id'])}</code> has a "
+                "<code>.bidsignore</code> that covers every data file, so none of its recordings are "
+                f"checked any more. Its first snapshot ({e(c['first_snapshot'])}) had no such pattern."
+            )
+        if c["participants_lost_data"] and c["data_shrank"]:
+            regress.append(
+                f"<code>{e(c['dataset_id'])}</code> has fewer data files by {e(c['latest_snapshot'])}, and "
+                f"{c['participants_lost_data']} people still listed in its <code>participants.tsv</code> "
+                "no longer have any data."
+            )
+    if regress:
+        out.append(f"<p>Updates also break things. {' '.join(regress)}</p>")
+    if unchanged >= 0.75 * n:
+        out.append(
+            "<p>The practical reading: problems present at first upload tend to stay, so the cheapest "
+            "place to catch them is before the first snapshot is published.</p>"
+        )
+    out.append("</section>")
+    return out
+
+
+def build(f: dict, hx: dict | None = None) -> str:
     from neurolake.fixtures import MUST_NOT_FLAG
 
     s = f["sample"][0]
@@ -431,6 +576,7 @@ def build(f: dict) -> str:
         "Each bar is labelled with the number of datasets in that year.</figcaption>",
         "</figure>",
         "</section>",
+        *(history_section(hx) if hx else []),
         "<section>",
         "<h2>How this was done</h2>",
         "<ul>",
@@ -458,7 +604,13 @@ def build(f: dict) -> str:
         "</ul>",
         '<div class="callout"><b>Limits</b>',
         f"<p>This covers {s['datasets']} of roughly {fmt(int(mirrors['ci95'][0]))} to "
-        f"{fmt(int(mirrors['ci95'][1]))} mirrored datasets, and only each one's latest snapshot. The rules "
+        f"{fmt(int(mirrors['ci95'][1]))} mirrored datasets"
+        + (
+            ", at their first and latest snapshots only, not every version in between. "
+            if hx
+            else ", and only each one's latest snapshot. "
+        )
+        + "The rules "
         "cover the metadata problems that most often break reuse, not the whole specification, so this "
         "complements the official validator rather than replacing it. Metadata stored in git-annex was not "
         "fetched, and the affected files are marked unknown rather than missing.</p></div>",
@@ -471,21 +623,28 @@ def build(f: dict) -> str:
         "neurolake ingest-mirror --from-file audit/sample_ids.txt --lake data/audit\n"
         "neurolake transform --lake data/audit\n"
         "python audit/analyze.py data/audit\n"
-        "python audit/render.py</code></pre>",
+        "python audit/render.py"
+        + ("\nmake history   # first vs latest snapshots" if hx else "")
+        + "</code></pre>",
         "<p>Code, rules and tests: "
         '<a href="https://github.com/pearlfranz20/neurolake">github.com/pearlfranz20/neurolake</a>.</p>',
         "</section>",
         "<footer>By Pearl Franz. Data from OpenNeuro (openneuro.org) via the OpenNeuroDatasets mirrors. "
-        'Every chart and count on this page is generated from <span class="mono">audit/findings.json</span>.</footer>',
+        'Every chart and count on this page is generated from <span class="mono">audit/findings.json</span>'
+        + (' and <span class="mono">audit/history.json</span>' if hx else "")
+        + ".</footer>",
         "</main>",
         f"<script>{JS}</script>",
     ]
     return "\n".join(out)
 
 
-def main(findings: str = "audit/findings.json", out_dir: str = "docs") -> None:
+def main(
+    findings: str = "audit/findings.json", out_dir: str = "docs", history: str = "audit/history.json"
+) -> None:
     f = json.loads(Path(findings).read_text())
-    body = build(f)
+    hx = json.loads(Path(history).read_text()) if Path(history).exists() else None
+    body = build(f, hx)
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     (out / "openneuro-audit.fragment.html").write_text(body, encoding="utf-8")

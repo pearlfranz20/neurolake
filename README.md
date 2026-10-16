@@ -12,8 +12,9 @@ Only metadata moves through the pipeline: file listings, `participants.tsv`, `*_
 - Participant bookkeeping is the weak spot: 19% have no `participants.tsv`, and some tables disagree with the data folders on ID format (`sub-1` against `sub-001`, or no `sub-` prefix at all).
 - 11 datasets mix TRs or sampling rates within one task, which matters for any pipeline that assumes one value per task.
 - A `.bidsignore` can hide more than intended. One dataset's `*` ignores every file, and another's `**/*dat*` matches `dataset_description.json`.
+- Updates rarely fix metadata. Of the 88 datasets with more than one snapshot, 75 have exactly as many findings in their latest snapshot as in their first. Fully clean moves from 47 to 51, errors stay at 7, and some updates introduce problems: the `*` above arrived in a later snapshot.
 
-Every number comes from `audit/findings.json`, produced by `audit/analyze.py`. `make audit` reruns the whole thing, and the same seed draws the same sample. The rules were checked against the BIDS schema, and the findings were verified independently against the raw files (see the method section of the page).
+Every number comes from `audit/findings.json` and `audit/history.json`, produced by `audit/analyze.py` and `audit/history.py`. `make audit` reruns the latest-snapshot audit and `make history` the first-vs-latest comparison, and the same seed draws the same sample. The rules were checked against the BIDS schema, and the findings were verified independently against the raw files (see the method section of the page).
 
 ## Architecture
 
@@ -52,6 +53,7 @@ pip install -e ".[dev]"
 
 neurolake demo                              # offline: synthetic fixtures -> data/report.html
 neurolake ingest-mirror ds000117 ds002718   # real OpenNeuro data via the GitHub mirrors
+neurolake ingest-mirror ds000117 --snapshot first   # a dataset's first published snapshot
 neurolake transform && neurolake report     # build, test, report
 neurolake discover-mirrors --sample 50      # a reproducible random sample of accessions
 neurolake ingest-local ~/data/ds000117 --snapshot 1.1.0

@@ -53,7 +53,9 @@ def ingest_openneuro(
 def ingest_mirror(
     dataset_ids: list[str] = typer.Argument(None, help="OpenNeuro accession numbers, e.g. ds000117"),
     from_file: Path | None = typer.Option(None, "--from-file", exists=True, help="One accession per line."),
-    snapshot: str | None = typer.Option(None, help="Snapshot tag; defaults to the latest."),
+    snapshot: str | None = typer.Option(
+        None, help='Snapshot tag, or "first" / "latest" (the default) for each dataset.'
+    ),
     workers: int = typer.Option(4, min=1, max=16, help="Datasets ingested in parallel."),
     lake: Path = LakeOpt,
 ):
@@ -71,8 +73,8 @@ def ingest_mirror(
     ids = list(dict.fromkeys(ids))
     if not ids:
         raise typer.BadParameter("give dataset ids or --from-file")
-    if snapshot and len(ids) > 1:
-        raise typer.BadParameter("--snapshot only makes sense with a single dataset")
+    if snapshot not in (None, "first", "latest") and len(ids) > 1:
+        raise typer.BadParameter("a specific --snapshot tag only makes sense with a single dataset")
 
     def one(ds: str):
         with GitHubMirrorSource(ds, snapshot) as src:

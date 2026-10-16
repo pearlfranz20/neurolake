@@ -70,7 +70,7 @@ SQL = {
                count(distinct dataset_id) as datasets, count(*) as files
         from marts.fct_dq_issue
         where rule_id in ('missing_required_sidecar_field', 'missing_recommended_sidecar_field')
-        group by all order by datasets desc
+        group by all order by datasets desc, files desc, field
     """,
     "by_year": """
         with per as (
@@ -133,7 +133,7 @@ ID_MISMATCH = """
 EXTRA = {
     "error_datasets": """
         select dataset_id, list(distinct rule_id order by rule_id) as rules, count(*) as issues
-        from marts.fct_dq_issue where severity = 'error' group by 1 order by issues desc
+        from marts.fct_dq_issue where severity = 'error' group by 1 order by issues desc, dataset_id
     """,
     "recent_vs_older": """
         with per as (
