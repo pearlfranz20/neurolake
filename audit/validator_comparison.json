@@ -9,7 +9,7 @@
     ],
     "datasets_run": 150,
     "assessed": 144,
-    "runtime_median_s": 5.14,
+    "runtime_median_s": 5.06,
     "not_assessed": [
       {
         "dataset_id": "ds004103",
@@ -59,18 +59,19 @@
     {
       "check": "participants_vs_data",
       "validator_keys": [
+        "NO_VALID_DATA_FOUND_FOR_SUBJECT",
         "PARTICIPANT_ID_MISMATCH"
       ],
       "rules": [
         "participant_without_data",
         "subject_missing_from_participants"
       ],
-      "both": 0,
-      "only_neurolake": 12,
+      "both": 1,
+      "only_neurolake": 11,
       "only_validator": 0,
       "neither": 132,
       "assessed": 144,
-      "agree": 132,
+      "agree": 133,
       "flagged_by_either": 12,
       "not_assessed_neurolake_flagged": 1
     },
@@ -236,9 +237,12 @@
       "check": "participants_vs_data",
       "direction": "only_neurolake",
       "category": "real_validator_miss",
-      "reason": "validator 1.15 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
+      "reason": "validator 1.15.0 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
       "neurolake_findings": 8,
       "neurolake_objects": 8,
+      "neurolake_rules": [
+        "participant_without_data"
+      ],
       "neurolake_examples": [
         "participant_without_data: sub-M80334973",
         "participant_without_data: sub-M80391109",
@@ -252,9 +256,13 @@
       "check": "participants_vs_data",
       "direction": "only_neurolake",
       "category": "real_validator_miss",
-      "reason": "validator 1.15 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
+      "reason": "validator 1.15.0 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
       "neurolake_findings": 16,
       "neurolake_objects": 16,
+      "neurolake_rules": [
+        "participant_without_data",
+        "subject_missing_from_participants"
+      ],
       "neurolake_examples": [
         "participant_without_data: sub-8",
         "participant_without_data: sub-6",
@@ -268,9 +276,12 @@
       "check": "participants_vs_data",
       "direction": "only_neurolake",
       "category": "real_validator_miss",
-      "reason": "validator 1.15 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
+      "reason": "validator 1.15.0 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
       "neurolake_findings": 6,
       "neurolake_objects": 6,
+      "neurolake_rules": [
+        "participant_without_data"
+      ],
       "neurolake_examples": [
         "participant_without_data: sub-xp212",
         "participant_without_data: sub-xp208",
@@ -284,9 +295,12 @@
       "check": "participants_vs_data",
       "direction": "only_neurolake",
       "category": "real_validator_miss",
-      "reason": "validator 1.15 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
+      "reason": "validator 1.15.0 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
       "neurolake_findings": 11,
       "neurolake_objects": 11,
+      "neurolake_rules": [
+        "subject_missing_from_participants"
+      ],
       "neurolake_examples": [
         "subject_missing_from_participants: sub-006",
         "subject_missing_from_participants: sub-011",
@@ -300,9 +314,12 @@
       "check": "participants_vs_data",
       "direction": "only_neurolake",
       "category": "real_validator_miss",
-      "reason": "validator 1.15 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
+      "reason": "validator 1.15.0 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
       "neurolake_findings": 11,
       "neurolake_objects": 11,
+      "neurolake_rules": [
+        "subject_missing_from_participants"
+      ],
       "neurolake_examples": [
         "subject_missing_from_participants: sub-301",
         "subject_missing_from_participants: sub-302",
@@ -316,9 +333,13 @@
       "check": "participants_vs_data",
       "direction": "only_neurolake",
       "category": "real_validator_miss",
-      "reason": "validator 1.15 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
+      "reason": "validator 1.15.0 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
       "neurolake_findings": 56,
       "neurolake_objects": 56,
+      "neurolake_rules": [
+        "participant_without_data",
+        "subject_missing_from_participants"
+      ],
       "neurolake_examples": [
         "participant_without_data: sub-3",
         "participant_without_data: sub-14",
@@ -332,9 +353,12 @@
       "check": "participants_vs_data",
       "direction": "only_neurolake",
       "category": "real_validator_miss",
-      "reason": "validator 1.15 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
+      "reason": "validator 1.15.0 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
       "neurolake_findings": 3,
       "neurolake_objects": 3,
+      "neurolake_rules": [
+        "participant_without_data"
+      ],
       "neurolake_examples": [
         "participant_without_data: sub-R1207J",
         "participant_without_data: sub-R1230J",
@@ -348,9 +372,12 @@
       "check": "participants_vs_data",
       "direction": "only_neurolake",
       "category": "real_validator_miss",
-      "reason": "validator 1.15 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
+      "reason": "validator 1.15.0 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
       "neurolake_findings": 8,
       "neurolake_objects": 8,
+      "neurolake_rules": [
+        "participant_without_data"
+      ],
       "neurolake_examples": [
         "participant_without_data: sub-002",
         "participant_without_data: sub-010",
@@ -367,6 +394,9 @@
       "reason": "validator could not assess the dataset (INCOMPLETE_DATASET)",
       "neurolake_findings": 3,
       "neurolake_objects": 3,
+      "neurolake_rules": [
+        "participant_without_data"
+      ],
       "neurolake_examples": [
         "participant_without_data: sub-R1106M",
         "participant_without_data: sub-R1074M",
@@ -380,27 +410,14 @@
       "check": "participants_vs_data",
       "direction": "only_neurolake",
       "category": "real_validator_miss",
-      "reason": "validator 1.15 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
+      "reason": "validator 1.15.0 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
       "neurolake_findings": 1,
       "neurolake_objects": 1,
+      "neurolake_rules": [
+        "subject_missing_from_participants"
+      ],
       "neurolake_examples": [
         "subject_missing_from_participants: sub-16"
-      ],
-      "validator_files": 0,
-      "validator_examples": []
-    },
-    {
-      "dataset_id": "ds006318",
-      "check": "participants_vs_data",
-      "direction": "only_neurolake",
-      "category": "real_validator_miss",
-      "reason": "validator 1.15 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
-      "neurolake_findings": 86,
-      "neurolake_objects": 86,
-      "neurolake_examples": [
-        "participant_without_data: sub-028",
-        "participant_without_data: sub-031",
-        "participant_without_data: sub-058"
       ],
       "validator_files": 0,
       "validator_examples": []
@@ -410,9 +427,12 @@
       "check": "participants_vs_data",
       "direction": "only_neurolake",
       "category": "real_validator_miss",
-      "reason": "validator 1.15 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
+      "reason": "validator 1.15.0 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
       "neurolake_findings": 1,
       "neurolake_objects": 1,
+      "neurolake_rules": [
+        "participant_without_data"
+      ],
       "neurolake_examples": [
         "participant_without_data: sub-05"
       ],
@@ -424,9 +444,12 @@
       "check": "participants_vs_data",
       "direction": "only_neurolake",
       "category": "real_validator_miss",
-      "reason": "validator 1.15 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
+      "reason": "validator 1.15.0 never reports PARTICIPANT_ID_MISMATCH: a synthetic dataset with that defect passed (audit/validator_probes.json)",
       "neurolake_findings": 94,
       "neurolake_objects": 94,
+      "neurolake_rules": [
+        "participant_without_data"
+      ],
       "neurolake_examples": [
         "participant_without_data: sub-CTR016",
         "participant_without_data: sub-CTR030",
@@ -443,6 +466,7 @@
       "reason": "neurolake does not parse task-masstask_run-01_events.tsv",
       "neurolake_findings": 0,
       "neurolake_objects": 0,
+      "neurolake_rules": [],
       "neurolake_examples": [],
       "validator_files": 1,
       "validator_examples": [
@@ -453,10 +477,13 @@
       "dataset_id": "ds006833",
       "check": "intended_for",
       "direction": "only_neurolake",
-      "category": "other",
-      "reason": "5 fieldmap sidecars set IntendedFor twice: neurolake reads the first value (targets missing), the validator the last (targets exist)",
+      "category": "neurolake_artefact",
+      "reason": "5 fieldmap sidecars set IntendedFor twice: neurolake keeps the first value (targets missing), the validator and most JSON parsers the last (targets exist). JSON leaves duplicate keys undefined, so the real finding is the duplicate key",
       "neurolake_findings": 32,
       "neurolake_objects": 5,
+      "neurolake_rules": [
+        "fieldmap_intended_for_missing_target"
+      ],
       "neurolake_examples": [
         "fieldmap_intended_for_missing_target: sub-01/ses-02/fmap/sub-01_ses-02_fieldmap.json",
         "fieldmap_intended_for_missing_target: sub-02/ses-02/fmap/sub-02_ses-02_fieldmap.json",
@@ -473,6 +500,7 @@
       "reason": ".bidsignore matches dataset_description.json: the validator ignores it, neurolake never ignores core files",
       "neurolake_findings": 0,
       "neurolake_objects": 0,
+      "neurolake_rules": [],
       "neurolake_examples": [],
       "validator_files": 1,
       "validator_examples": [
@@ -484,9 +512,12 @@
       "check": "required_sidecar_field",
       "direction": "only_neurolake",
       "category": "real_validator_miss",
-      "reason": "the recordings have no sidecar at all: validator 1.15 checks sidecar files against its schema, never that a recording has one",
+      "reason": "the recordings have no sidecar at all: validator 1.15.0 checks EEG, iEEG and MEG sidecar files against its schema but does not require that such a recording has one",
       "neurolake_findings": 1065,
       "neurolake_objects": 213,
+      "neurolake_rules": [
+        "missing_required_sidecar_field"
+      ],
       "neurolake_examples": [
         "missing_required_sidecar_field: sub-01/ses-01/eeg/sub-01_ses-01_task-WM_run-1_eeg.set",
         "missing_required_sidecar_field: sub-01/ses-02/eeg/sub-01_ses-02_task-WM_run-1_eeg.set",
@@ -500,9 +531,12 @@
       "check": "required_sidecar_field",
       "direction": "only_neurolake",
       "category": "real_validator_miss",
-      "reason": "the recordings have no sidecar at all: validator 1.15 checks sidecar files against its schema, never that a recording has one",
+      "reason": "the recordings have no sidecar at all: validator 1.15.0 checks EEG, iEEG and MEG sidecar files against its schema but does not require that such a recording has one",
       "neurolake_findings": 45,
       "neurolake_objects": 9,
+      "neurolake_rules": [
+        "missing_required_sidecar_field"
+      ],
       "neurolake_examples": [
         "missing_required_sidecar_field: sub-001/ses-001/eeg/sub-001_ses-001_task-wake_eeg.set",
         "missing_required_sidecar_field: sub-002/ses-001/eeg/sub-002_ses-001_task-wake_eeg.set",
@@ -516,9 +550,12 @@
       "check": "required_sidecar_field",
       "direction": "only_neurolake",
       "category": "real_validator_miss",
-      "reason": "the recordings have no sidecar at all: validator 1.15 checks sidecar files against its schema, never that a recording has one",
+      "reason": "the recordings have no sidecar at all: validator 1.15.0 checks EEG, iEEG and MEG sidecar files against its schema but does not require that such a recording has one",
       "neurolake_findings": 15,
       "neurolake_objects": 3,
+      "neurolake_rules": [
+        "missing_required_sidecar_field"
+      ],
       "neurolake_examples": [
         "missing_required_sidecar_field: sub-S020/meg/sub-S020_task-RiskyDecision_run-10_meg.ds",
         "missing_required_sidecar_field: sub-S020/meg/sub-S020_task-RiskyDecision_run-10_meg.ds",
@@ -532,9 +569,12 @@
       "check": "required_sidecar_field",
       "direction": "only_neurolake",
       "category": "real_validator_miss",
-      "reason": "the recordings have no sidecar at all: validator 1.15 checks sidecar files against its schema, never that a recording has one",
+      "reason": "the recordings have no sidecar at all: validator 1.15.0 checks EEG, iEEG and MEG sidecar files against its schema but does not require that such a recording has one",
       "neurolake_findings": 5,
       "neurolake_objects": 1,
+      "neurolake_rules": [
+        "missing_required_sidecar_field"
+      ],
       "neurolake_examples": [
         "missing_required_sidecar_field: sub-16/eeg/sub-16_task-PerceiveImagine_eeg.set",
         "missing_required_sidecar_field: sub-16/eeg/sub-16_task-PerceiveImagine_eeg.set",
@@ -550,8 +590,9 @@
       "bidsignore_semantics": 0,
       "validator_not_run": 0,
       "real_neurolake_miss": 0,
-      "real_validator_miss": 16,
-      "other": 1
+      "real_validator_miss": 15,
+      "neurolake_artefact": 1,
+      "other": 0
     },
     "validator_not_assessed": {
       "version_drift": 0,
@@ -559,6 +600,7 @@
       "validator_not_run": 1,
       "real_neurolake_miss": 0,
       "real_validator_miss": 0,
+      "neurolake_artefact": 0,
       "other": 0
     },
     "only_validator": {
@@ -567,6 +609,7 @@
       "validator_not_run": 0,
       "real_neurolake_miss": 1,
       "real_validator_miss": 0,
+      "neurolake_artefact": 0,
       "other": 0
     }
   },
@@ -654,11 +697,6 @@
       "files": 474
     },
     {
-      "key": "NO_VALID_DATA_FOUND_FOR_SUBJECT",
-      "datasets": 1,
-      "files": 86
-    },
-    {
       "key": "SUBJECT_LABEL_IN_FILENAME_DOESNOT_MATCH_DIRECTORY",
       "datasets": 1,
       "files": 1
@@ -677,11 +715,42 @@
   "probes": {
     "validator_version": "1.15.0",
     "setup": "participants.tsv lists sub-01, sub-03 and 04 (no prefix); data folders are sub-01, sub-02",
-    "keys_reported": [
-      "CUSTOM_COLUMN_WITHOUT_DESCRIPTION",
-      "PARTICIPANT_ID_PATTERN",
-      "README_FILE_SMALL"
-    ],
+    "source": "fullTest declares `const participants = null` (dist/commonjs/cli.js:137602, dist/commonjs/index.js:133003) and passes it to the participants check",
+    "modes": {
+      "normal": {
+        "flags": [
+          "--json",
+          "--ignoreNiftiHeaders",
+          "--verbose"
+        ],
+        "keys_reported": [
+          "CUSTOM_COLUMN_WITHOUT_DESCRIPTION",
+          "PARTICIPANT_ID_PATTERN",
+          "README_FILE_SMALL"
+        ],
+        "expected": {
+          "PARTICIPANT_ID_MISMATCH": false,
+          "PARTICIPANT_ID_PATTERN": true
+        }
+      },
+      "git-tree": {
+        "flags": [
+          "--json",
+          "--gitTreeMode",
+          "--ignoreNiftiHeaders",
+          "--verbose"
+        ],
+        "keys_reported": [
+          "CUSTOM_COLUMN_WITHOUT_DESCRIPTION",
+          "PARTICIPANT_ID_PATTERN",
+          "README_FILE_SMALL"
+        ],
+        "expected": {
+          "PARTICIPANT_ID_MISMATCH": false,
+          "PARTICIPANT_ID_PATTERN": true
+        }
+      }
+    },
     "expected": {
       "PARTICIPANT_ID_MISMATCH": false,
       "PARTICIPANT_ID_PATTERN": true
@@ -697,8 +766,8 @@
     {
       "dataset_id": "ds006318",
       "check": "participants_vs_data",
-      "direction": "only_neurolake",
-      "note": "sub-028 is listed in participants.tsv but its folder holds only JPEG images under sub-028/derivatives/, no BIDS data file"
+      "direction": "both",
+      "note": "All 86 participants.tsv rows match the 86 folders, and every folder holds only JPEG images under derivatives/, no BIDS data file. The validator reports NO_VALID_DATA_FOUND_FOR_SUBJECT for all 86"
     },
     {
       "dataset_id": "ds002338",
@@ -710,7 +779,7 @@
       "dataset_id": "ds004348",
       "check": "required_sidecar_field",
       "direction": "only_neurolake",
-      "note": "sub-001 and sub-005 each have a task-wake_eeg.set with no eeg.json at any level (only task-sleep has one), so TaskName, SamplingFrequency and the other REQUIRED fields are undefined"
+      "note": "All nine subjects have a task-wake_eeg.set with no eeg.json at any level (only task-sleep has one), so the five REQUIRED EEG fields are undefined: 45 findings, 9 recordings x 5 fields"
     },
     {
       "dataset_id": "ds006833",

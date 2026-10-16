@@ -247,9 +247,9 @@ DERIVATIVE_RULES = (
     "dataset_description_missing",
     "dataset_description_missing_field",
 )
-# REQUIRED sidecar fields in the JSON schemas bundled with bids-validator 1.15.0
-# (dist/commonjs/index.js, `required: [...]` of the eeg, ieeg and meg sidecar schemas),
-# plus the two BOLD fields it checks in code (REPETITION_TIME_MUST_DEFINE, TASK_NAME_MUST_DEFINE).
+# REQUIRED sidecar fields in bids-validator 1.15.0: the `required` lists of
+# validators/json/schemas/{eeg,ieeg,meg}.json (bundled into dist/commonjs/index.js), plus
+# the two BOLD fields it checks in code (REPETITION_TIME_MUST_DEFINE, TASK_NAME_MUST_DEFINE).
 VALIDATOR_REQUIRED = {
     "eeg": {"TaskName", "SamplingFrequency", "SoftwareFilters", "EEGReference", "PowerLineFrequency"},
     "ieeg": {"TaskName", "SamplingFrequency", "PowerLineFrequency", "SoftwareFilters", "iEEGReference"},
@@ -270,6 +270,7 @@ CATEGORIES = (
     "validator_not_run",
     "real_neurolake_miss",
     "real_validator_miss",
+    "neurolake_artefact",
     "other",
 )
 # Issues about a file that is absent carry no path; this is the file they are about.
@@ -335,16 +336,30 @@ def assessment(rec: dict | None) -> str | None:
 PROBES_JSON = AUDIT / "validator_probes.json"
 
 
+PROBE_MODES = {
+    "normal": ("--json", "--ignoreNiftiHeaders", "--verbose"),
+    "git-tree": ("--json", "--gitTreeMode", "--ignoreNiftiHeaders", "--verbose"),
+}
+
+
 def probe(validator_bin: str = VALIDATOR_BIN, out: str | Path = PROBES_JSON) -> dict:
     """Run the validator on a tiny synthetic dataset with known defects, to tell "the
-    validator found nothing" apart from "the validator never reports this".
+    validator found nothing" apart from "the validator never reports this". It runs in
+    normal mode and in git-tree mode (the dataset is committed to a throwaway repository).
 
     participants.tsv lists sub-01 and sub-03 and writes `04` without its prefix, while the
     data folders are sub-01 and sub-02: so sub-02 is missing from the table and sub-03 has
     no data (PARTICIPANT_ID_MISMATCH), and `04` lacks the prefix (PARTICIPANT_ID_PATTERN,
-    the positive control showing participants.tsv was read)."""
+    the positive control showing participants.tsv was read). A key counts as reported if
+    any mode reports it.
+
+    The source explains the result: in 1.15.0 fullTest declares `const participants = null`
+    (dist/commonjs/cli.js:137602, index.js:133003) and passes that constant to the
+    participants check, so PARTICIPANT_ID_MISMATCH is unreachable."""
     import tempfile
 
+    planted = ("PARTICIPANT_ID_MISMATCH", "PARTICIPANT_ID_PATTERN")
+    modes = {}
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp) / "probe"
         for sub in ("01", "02"):
@@ -355,22 +370,37 @@ def probe(validator_bin: str = VALIDATOR_BIN, out: str | Path = PROBES_JSON) -> 
         )
         (root / "participants.tsv").write_text("participant_id\tage\nsub-01\t30\nsub-03\t31\n04\t32\n")
         (root / "README").write_text("Synthetic dataset for probing which issues the validator reports.\n")
-        proc = subprocess.run(
-            [validator_bin, str(root), "--json", "--ignoreNiftiHeaders", "--verbose"],
-            capture_output=True,
-            text=True,
-            timeout=300,
+        _git("-C", str(root), "init", "-q")
+        _git("-C", str(root), "add", "-A")
+        _git(
+            "-C",
+            str(root),
+            "-c",
+            "user.name=probe",
+            "-c",
+            "user.email=probe@example.org",
+            "commit",
+            "-qm",
+            "p",
         )
-    raw = json.loads(proc.stdout)
-    keys = sorted({i["key"] for group in raw["issues"].values() for i in group})
+        for mode, flags in PROBE_MODES.items():
+            proc = subprocess.run(
+                [validator_bin, str(root), *flags], capture_output=True, text=True, timeout=300
+            )
+            raw = json.loads(proc.stdout)
+            keys = sorted({i["key"] for group in raw["issues"].values() for i in group})
+            modes[mode] = {
+                "flags": list(flags),
+                "keys_reported": keys,
+                "expected": {k: k in keys for k in planted},
+            }
     result = {
         "validator_version": validator_version(validator_bin),
         "setup": "participants.tsv lists sub-01, sub-03 and 04 (no prefix); data folders are sub-01, sub-02",
-        "keys_reported": keys,
-        "expected": {
-            "PARTICIPANT_ID_MISMATCH": "PARTICIPANT_ID_MISMATCH" in keys,
-            "PARTICIPANT_ID_PATTERN": "PARTICIPANT_ID_PATTERN" in keys,
-        },
+        "source": "fullTest declares `const participants = null` (dist/commonjs/cli.js:137602, "
+        "dist/commonjs/index.js:133003) and passes it to the participants check",
+        "modes": modes,
+        "expected": {k: any(m["expected"][k] for m in modes.values()) for k in planted},
     }
     Path(out).write_text(json.dumps(result, indent=2) + "\n")
     print(f"wrote {out}: {result['expected']}")
@@ -495,7 +525,7 @@ def classify(d: dict, facts: dict, gaps: set[str]) -> tuple[str, str]:
         keys = ", ".join(sorted(set(d["validator_keys"]) & gaps))
         return (
             "real_validator_miss",
-            f"validator 1.15 never reports {keys}: a synthetic dataset with that defect passed "
+            f"validator 1.15.0 never reports {keys}: a synthetic dataset with that defect passed "
             "(audit/validator_probes.json)",
         )
     if d["check"] == "required_sidecar_field":
@@ -510,8 +540,8 @@ def classify(d: dict, facts: dict, gaps: set[str]) -> tuple[str, str]:
         if paths <= facts["sidecarless"].get(ds, set()):
             return (
                 "real_validator_miss",
-                "the recordings have no sidecar at all: validator 1.15 checks sidecar files against its "
-                "schema, never that a recording has one",
+                "the recordings have no sidecar at all: validator 1.15.0 checks EEG, iEEG and MEG sidecar "
+                "files against its schema but does not require that such a recording has one",
             )
     if d["check"] == "intended_for":
         sidecars = sorted({obj for _, obj, _ in d["nl"]})
@@ -527,9 +557,11 @@ def classify(d: dict, facts: dict, gaps: set[str]) -> tuple[str, str]:
                 dup.append(last_ok)
         if dup and len(dup) == len(sidecars) and all(dup):
             return (
-                "other",
+                "neurolake_artefact",
                 f"{len(sidecars)} fieldmap sidecar{'s' if len(sidecars) != 1 else ''} set IntendedFor twice: "
-                "neurolake reads the first value (targets missing), the validator the last (targets exist)",
+                "neurolake keeps the first value (targets missing), the validator and most JSON parsers the "
+                "last (targets exist). JSON leaves duplicate keys undefined, so the real finding is the "
+                "duplicate key",
             )
     return "other", "unexplained: neurolake reports it, the validator does not"
 
@@ -603,6 +635,7 @@ def build_comparison(
     assessed = sorted(ds for ds in tags if not assess[ds])
 
     per_check, disagreements = [], []
+    agreed: set[tuple[str, str, str]] = set()
     for name, spec in checks.items():
         rules, vkeys = sorted(spec["rules"]), sorted(spec["validator_keys"])
         counts = {"both": 0, "only_neurolake": 0, "only_validator": 0, "neither": 0}
@@ -618,6 +651,7 @@ def build_comparison(
                     continue
             elif n_found and v_found:
                 counts["both"] += 1
+                agreed.add((ds, name, "both"))
                 continue
             elif not n_found and not v_found:
                 counts["neither"] += 1
@@ -645,6 +679,7 @@ def build_comparison(
                     "reason": d["reason"],
                     "neurolake_findings": len(n_found),
                     "neurolake_objects": len({o for _, o, _ in n_found}),
+                    "neurolake_rules": sorted({r for r, _, _ in n_found}),
                     "neurolake_examples": [f"{r}: {o}" for r, o, _ in n_found[:3]],
                     "validator_files": sum(len(v) for v in v_found.values()),
                     "validator_examples": [f"{k}: {p}" for k, v in v_found.items() for p, _ in v[:3]][:3],
@@ -706,10 +741,11 @@ def build_comparison(
         c = cat_counts.setdefault(d["direction"], {k: 0 for k in CATEGORIES})
         c[d["category"]] += 1
 
-    keyset = {(d["dataset_id"], d["check"], d["direction"]) for d in disagreements}
+    # a hand check is about a disagreement, or about a pair both tools flagged ("both")
+    keyset = {(d["dataset_id"], d["check"], d["direction"]) for d in disagreements} | agreed
     for h in handchecks:
         if (h["dataset_id"], h["check"], h["direction"]) not in keyset:
-            raise SystemExit(f"hand check does not match a disagreement: {h}")
+            raise SystemExit(f"hand check does not match a disagreement or agreement: {h}")
 
     rec0 = next((records[ds] for ds in assessed), {})
     runtimes = sorted(r["runtime_s"] for r in records.values())

@@ -403,6 +403,7 @@ CATEGORY_LABELS = {
     "validator_not_run": "validator could not assess",
     "real_neurolake_miss": "real neurolake miss",
     "real_validator_miss": "real validator miss",
+    "neurolake_artefact": "neurolake parser artefact",
     "other": "other",
 }
 
@@ -444,13 +445,30 @@ def validator_section(vx: dict) -> list[str]:
         + f". Agreement is computed over those {n_ok} only: a dataset the validator could not assess "
         "never counts as agreement.</p>",
     ]
+    probes = vx.get("probes") or {}
+    pexp = probes.get("expected", {})
+    dead = {k for k, seen in pexp.items() if not seen} if pexp.get("PARTICIPANT_ID_PATTERN") else set()
+    hc = vx.get("hand_checked") or []
+    n_hc_dis = sum(h["direction"] != "both" for h in hc)
     if flagged:
+        live = [c for c in checks if not set(c["validator_keys"]) & dead]
+        dead_checks = [c for c in checks if set(c["validator_keys"]) & dead]
+        l_flag, l_both = sum(c["flagged_by_either"] for c in live), sum(c["both"] for c in live)
+        without = ""
+        if dead_checks and l_flag:
+            names = ", ".join(e(CHECK_LABELS.get(c["check"], c["check"]).lower()) for c in dead_checks)
+            codes = ", ".join(f"<code>{e(k)}</code>" for k in sorted(dead))
+            without = (
+                f" Leaving out the {names} check, where validator {e(v['version'])} never emits {codes}, "
+                f"they agree on {l_both} of {l_flag} ({pct(l_both, l_flag)})."
+            )
         out.append(
             f"<p>{len(checks)} neurolake rules have a validator check that tests the same thing "
             "(<code>audit/validator_map.csv</code>). On those, the two tools flagged "
             f"{_plural(flagged, 'dataset-check pair')} between them and agreed on {both} "
-            f"({pct(both, flagged)}). Every one of the {_plural(len(real), 'disagreement')} is "
-            "classified below from the data, not by hand.</p>"
+            f"({pct(both, flagged)}).{without} Each disagreement is classified by rules in "
+            f"<code>audit/validator.py</code>, and {n_hc_dis} of the {_plural(len(real), 'disagreement')} "
+            "were checked by hand.</p>"
         )
     rows = "".join(
         f"<tr><td>{e(CHECK_LABELS.get(c['check'], c['check']))}<br>"
@@ -478,31 +496,48 @@ def validator_section(vx: dict) -> list[str]:
     miss_v = by_cat.get("real_validator_miss", [])
     if miss_v:
         per_check: dict[str, list[int]] = {}
+        two_sided = False
         for d in miss_v:
             c = per_check.setdefault(d["check"], [0, 0])
             c[0] += 1
             c[1] += d.get("neurolake_objects", 0)
-        noun = {"participants_vs_data": "subject", "required_sidecar_field": "recording"}
-        detail = ", ".join(
-            f"{_plural(n, 'dataset')} on {e(CHECK_LABELS.get(c, c).lower())}"
-            + (f" covering {_plural(k, noun[c])}" if c in noun else "")
+            # a person can appear under two ID spellings: once per side of the join
+            two_sided |= d["check"] == "participants_vs_data" and len(d.get("neurolake_rules", [])) > 1
+        noun = {"participants_vs_data": "participant ID", "required_sidecar_field": "recording"}
+
+        def covering(c, k):
+            if c not in noun:
+                return ""
+            note = (
+                " (some people appear twice, once per ID spelling)"
+                if c == "participants_vs_data" and two_sided
+                else ""
+            )
+            return f" covering {_plural(k, noun[c])}{note}"
+
+        detail = " ".join(
+            f"{_plural(n, 'dataset')} on {e(CHECK_LABELS.get(c, c).lower())}{covering(c, k)}."
             for c, (n, k) in sorted(per_check.items(), key=lambda x: -x[1][0])
         )
         reasons_v = sorted({d["reason"] for d in miss_v})
         parts.append(
             f"<p>{_plural(len(miss_v), 'disagreement')} in {_plural(len({d['dataset_id'] for d in miss_v}), 'dataset')} "
-            f"are problems neurolake reports and validator {e(v['version'])} does not ({detail}). "
+            f"are problems neurolake reports and validator {e(v['version'])} does not. {detail} "
             + " ".join(f"{e(r[0].upper() + r[1:])}." for r in reasons_v)
             + "</p>"
         )
-        probes = vx.get("probes") or {}
-        if probes.get("expected", {}).get("PARTICIPANT_ID_MISMATCH") is False:
+        if "PARTICIPANT_ID_MISMATCH" in dead:
+            modes = " and ".join(e(m) for m in probes.get("modes", {}))
             parts.append(
                 "<p>The participants check is worth a note. A synthetic dataset whose "
                 "<code>participants.tsv</code> and subject folders disagree passes validator "
-                f"{e(v['version'])} without <code>PARTICIPANT_ID_MISMATCH</code>, while the same file's "
-                "missing <code>sub-</code> prefix is reported, so the table was read. Its silence on these "
-                "datasets therefore says nothing about them.</p>"
+                f"{e(v['version'])} without <code>PARTICIPANT_ID_MISMATCH</code> (run in {modes} mode), "
+                "while the same file's missing <code>sub-</code> prefix is reported, so the table was read. "
+                f"The check is unreachable in {e(v['version'])}: "
+                + e(probes.get("source", "")).replace(
+                    "`const participants = null`", "<code>const participants = null</code>"
+                )
+                + ". Its silence on these datasets says nothing about them.</p>"
             )
     miss_n = by_cat.get("real_neurolake_miss", [])
     if miss_n:
@@ -511,6 +546,13 @@ def validator_section(vx: dict) -> list[str]:
         parts.append(
             f"<p>The other way, {_plural(len(miss_n), 'disagreement')} {verb} the validator reports and "
             f"neurolake misses. {listed}</p>"
+        )
+    artefacts = by_cat.get("neurolake_artefact", [])
+    if artefacts:
+        parts.append(
+            f"<p>{CATEGORY_LABELS['neurolake_artefact'].capitalize()} ({len(artefacts)}). "
+            + " ".join(f"<code>{e(d['dataset_id'])}</code>: {e(d['reason'])}." for d in artefacts)
+            + " neurolake will change to keep the last value, as most JSON parsers do.</p>"
         )
     for cat in ("bidsignore_semantics", "version_drift", "other"):
         items = by_cat.get(cat, [])
@@ -556,10 +598,10 @@ def validator_section(vx: dict) -> list[str]:
         f"<th>Class</th><th>Why</th></tr></thead><tbody>{drows}</tbody></table></div></details>",
     ]
 
-    hc = vx.get("hand_checked") or []
     if hc:
         n_dir = {k: sum(h["direction"] == k for h in hc) for k in dir_label}
         avail = {k: sum(d["direction"] == k for d in dis) for k in dir_label}
+        n_both = sum(h["direction"] == "both" for h in hc)
         hc_rows = "".join(
             f"<li><code>{e(h['dataset_id'])}</code> ({e(CHECK_LABELS.get(h['check'], h['check']))}): "
             f"{e(h['note'])}.</li>"
@@ -569,7 +611,8 @@ def validator_section(vx: dict) -> list[str]:
             f"<details><summary>Checked by hand against the raw files ({len(hc)})</summary>"
             f"<p>{n_dir['only_neurolake']} of the {avail['only_neurolake']} neurolake-only and "
             f"{n_dir['only_validator']} of the {avail['only_validator']} validator-only disagreements "
-            f"were opened in the cloned snapshots.</p><ul>{hc_rows}</ul></details>"
+            + (f"and {_plural(n_both, 'agreement')} " if n_both else "")
+            + f"were opened in the cloned snapshots.</p><ul>{hc_rows}</ul></details>"
         )
 
     no_eq = vx["neurolake_rules_without_validator_equivalent"]

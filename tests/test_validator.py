@@ -131,7 +131,7 @@ def test_probe_needs_its_positive_control():
 
 
 # One dataset per situation the classification has to handle.
-DATASETS = [f"ds{i}" for i in range(1, 11)]
+DATASETS = [f"ds{i}" for i in range(1, 12)]
 FIELDMAP_DOC = json.dumps({"IntendedFor": ["ses-01/func/gone_bold.nii.gz"]})[:-1] + (
     ', "IntendedFor": ["ses-02/func/here_bold.nii.gz"]}'
 )
@@ -160,6 +160,9 @@ def comparison():
         # clean on both sides
         "ds9": rec("ds9", []),
         # validator-only required field neurolake's seed does not list (version drift)
+        # both: folders without data files are the validator's NO_VALID_DATA_FOUND_FOR_SUBJECT and
+        # neurolake's participant_without_data, even though the probe shows the mismatch check is dead
+        "ds11": rec("ds11", [issue("NO_VALID_DATA_FOUND_FOR_SUBJECT", 67, [["sub-01", None]])]),
         "ds10": rec(
             "ds10",
             [
@@ -198,6 +201,7 @@ def comparison():
             "sub-01/fmap/sub-01_fieldmap.json",
             "IntendedFor target not found: ses-01/func/gone_bold.nii.gz",
         ),
+        ("ds11", "participant_without_data", "sub-01", "listed in participants.tsv but no data files found"),
         (
             "ds9",
             "missing_participants_tsv",
@@ -220,7 +224,8 @@ def comparison():
     }
     probes = {"expected": {"PARTICIPANT_ID_MISMATCH": False, "PARTICIPANT_ID_PATTERN": True}}
     handchecks = [
-        {"dataset_id": "ds3", "check": "tsv_row_length", "direction": "only_validator", "note": "x"}
+        {"dataset_id": "ds3", "check": "tsv_row_length", "direction": "only_validator", "note": "x"},
+        {"dataset_id": "ds11", "check": "participants_vs_data", "direction": "both", "note": "x"},
     ]
     return validator.build_comparison(
         tags, records, issues, facts, validator.load_map(), probes, RULE_IDS, handchecks
@@ -232,12 +237,12 @@ def _dis(result, ds, check):
 
 
 def test_agreement_only_over_assessed(comparison):
-    assert comparison["validator"]["assessed"] == 9
+    assert comparison["validator"]["assessed"] == 10
     tsv = next(c for c in comparison["checks"] if c["check"] == "tsv_row_length")
-    assert (tsv["both"], tsv["only_validator"], tsv["only_neurolake"], tsv["neither"]) == (1, 1, 0, 7)
+    assert (tsv["both"], tsv["only_validator"], tsv["only_neurolake"], tsv["neither"]) == (1, 1, 0, 8)
     part = next(c for c in comparison["checks"] if c["check"] == "participants_vs_data")
-    assert part["only_neurolake"] == 1 and part["not_assessed_neurolake_flagged"] == 1
-    assert part["both"] + part["only_neurolake"] + part["only_validator"] + part["neither"] == 9
+    assert part["both"] == 1 and part["only_neurolake"] == 1 and part["not_assessed_neurolake_flagged"] == 1
+    assert part["both"] + part["only_neurolake"] + part["only_validator"] + part["neither"] == 10
 
 
 @pytest.mark.parametrize(
@@ -249,7 +254,7 @@ def test_agreement_only_over_assessed(comparison):
         ("ds5", "participants_vs_data", "validator_not_assessed", "validator_not_run"),
         ("ds6", "required_sidecar_field", "only_neurolake", "real_validator_miss"),
         ("ds7", "required_sidecar_field", "only_neurolake", "version_drift"),
-        ("ds8", "intended_for", "only_neurolake", "other"),
+        ("ds8", "intended_for", "only_neurolake", "neurolake_artefact"),
         ("ds10", "required_sidecar_field", "only_validator", "version_drift"),
     ],
 )
@@ -272,7 +277,7 @@ def test_unmatched_columns(comparison):
 
 def test_handcheck_must_match_a_disagreement(comparison):
     tags = {"ds1": "1.0.0"}
-    with pytest.raises(SystemExit, match="hand check"):
+    with pytest.raises(SystemExit, match="hand check does not match"):
         validator.build_comparison(
             tags,
             {"ds1": rec("ds1", [])},
@@ -303,7 +308,18 @@ def test_section_states_method_and_guards_claims(comparison):
     html = "\n".join(render.validator_section(comparison))
     assert "1.15.0" in html and "2.x" in html
     assert "--gitTreeMode" in html and "--ignoreNiftiHeaders" in html
-    assert "could assess 9 of the 10" in html
+    assert "could assess 10 of the 11" in html
     assert "catches what the validator misses" not in html
     # the real-miss sentence carries its numbers
     assert "2 disagreements in 2 datasets" in html
+
+
+def test_validator_own_equivalent_code_makes_agreement_not_a_miss(comparison):
+    assert not [d for d in comparison["disagreements"] if d["dataset_id"] == "ds11"]
+
+
+def test_section_leaves_out_the_dead_check_and_counts_hand_checks(comparison):
+    html = "\n".join(render.validator_section(comparison))
+    assert "never emits <code>PARTICIPANT_ID_MISMATCH</code>" in html
+    assert "1 of the 7 disagreements were checked by hand" in html
+    assert "neurolake will change to keep the last value" in html

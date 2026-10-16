@@ -37,14 +37,15 @@ datasets-export:    ## re-export audit/datasets.json from the lake, then render 
 	python audit/datasets.py render
 
 VALIDATOR_PREFIX ?= data/validator
+VALIDATOR_LAKE ?= $(patsubst %/neurolake.duckdb,%,$(DATASETS_LAKE))
 
 validator-run:      ## run bids-validator 1.15.0 on every latest snapshot (network, npm; after `make history`)
 	npm install --prefix $(VALIDATOR_PREFIX) --no-audit --no-fund bids-validator@1.15.0
-	python audit/validator.py run audit/history_pairs.csv data/history/latest $(VALIDATOR_PREFIX)/node_modules/.bin/bids-validator
+	python audit/validator.py run audit/history_pairs.csv $(VALIDATOR_LAKE) $(VALIDATOR_PREFIX)/node_modules/.bin/bids-validator
 	python audit/validator.py probe $(VALIDATOR_PREFIX)/node_modules/.bin/bids-validator
 
 validator:          ## compare the committed validator output with the latest lake, then render
-	python audit/validator.py compare data/history/latest
+	python audit/validator.py compare $(VALIDATOR_LAKE)
 	python audit/render.py
 
 transform:

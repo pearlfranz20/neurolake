@@ -2,6 +2,7 @@ check,validator_key,neurolake_rule_id,justification
 participant_id_prefix,PARTICIPANT_ID_PATTERN,participant_id_without_prefix,Both flag participant_id values in participants.tsv that do not match sub-<label>
 participants_vs_data,PARTICIPANT_ID_MISMATCH,subject_missing_from_participants,"The validator compares the subject folders with participant_id in both directions; neurolake splits the same comparison into two rules, one per direction"
 participants_vs_data,PARTICIPANT_ID_MISMATCH,participant_without_data,"The other direction of the same comparison: a participants.tsv row whose subject has no data folder"
+participants_vs_data,NO_VALID_DATA_FOUND_FOR_SUBJECT,participant_without_data,"A subject folder with no BIDS data file. neurolake reports the same subject as listed but without data, so both describe a participant who has no data"
 tsv_row_length,TSV_EQUAL_ROWS,malformed_tsv_row,Both flag a TSV row whose number of columns differs from the header
 invalid_json,JSON_INVALID,invalid_json,Both flag a JSON file that cannot be parsed
 intended_for,INTENDED_FOR,fieldmap_intended_for_missing_target,Both flag a fieldmap IntendedFor entry that points at a file not in the dataset

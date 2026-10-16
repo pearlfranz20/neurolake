@@ -1,11 +1,42 @@
 {
   "validator_version": "1.15.0",
   "setup": "participants.tsv lists sub-01, sub-03 and 04 (no prefix); data folders are sub-01, sub-02",
-  "keys_reported": [
-    "CUSTOM_COLUMN_WITHOUT_DESCRIPTION",
-    "PARTICIPANT_ID_PATTERN",
-    "README_FILE_SMALL"
-  ],
+  "source": "fullTest declares `const participants = null` (dist/commonjs/cli.js:137602, dist/commonjs/index.js:133003) and passes it to the participants check",
+  "modes": {
+    "normal": {
+      "flags": [
+        "--json",
+        "--ignoreNiftiHeaders",
+        "--verbose"
+      ],
+      "keys_reported": [
+        "CUSTOM_COLUMN_WITHOUT_DESCRIPTION",
+        "PARTICIPANT_ID_PATTERN",
+        "README_FILE_SMALL"
+      ],
+      "expected": {
+        "PARTICIPANT_ID_MISMATCH": false,
+        "PARTICIPANT_ID_PATTERN": true
+      }
+    },
+    "git-tree": {
+      "flags": [
+        "--json",
+        "--gitTreeMode",
+        "--ignoreNiftiHeaders",
+        "--verbose"
+      ],
+      "keys_reported": [
+        "CUSTOM_COLUMN_WITHOUT_DESCRIPTION",
+        "PARTICIPANT_ID_PATTERN",
+        "README_FILE_SMALL"
+      ],
+      "expected": {
+        "PARTICIPANT_ID_MISMATCH": false,
+        "PARTICIPANT_ID_PATTERN": true
+      }
+    }
+  },
   "expected": {
     "PARTICIPANT_ID_MISMATCH": false,
     "PARTICIPANT_ID_PATTERN": true
