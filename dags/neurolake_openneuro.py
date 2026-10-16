@@ -4,7 +4,11 @@ ingest (one mapped task per dataset)  ->  dbt build  ->  HTML report
 
 Datasets come from the `dataset_ids` param, so a manual run can target any list.
 Ingest tasks are idempotent: each overwrites its own (dataset, snapshot) partition,
-so retries and re-runs are safe. Works on Airflow 3 (airflow.sdk) and 2.x.
+so retries and re-runs are safe. A dataset whose latest snapshot is already its
+current, fully published run is not cloned again: the task succeeds and returns
+status "skipped", so transform still runs. Set the `force` param to re-ingest
+everything (for example after a change to the ingest code). Works on Airflow 3
+(airflow.sdk) and 2.x.
 """
 
 from __future__ import annotations
@@ -36,7 +40,10 @@ DEFAULT_DATASETS = [
     catchup=False,
     max_active_runs=1,
     default_args={"retries": 2, "retry_delay": timedelta(minutes=5)},
-    params={"dataset_ids": Param(DEFAULT_DATASETS, type="array", description="OpenNeuro accessions")},
+    params={
+        "dataset_ids": Param(DEFAULT_DATASETS, type="array", description="OpenNeuro accessions"),
+        "force": Param(False, type="boolean", description="Re-ingest datasets even if unchanged"),
+    },
     tags=["neuroimaging", "bids", "dbt"],
     doc_md=__doc__,
 )
@@ -50,12 +57,14 @@ def neurolake_openneuro():
     def ingest(dataset_id: str) -> dict:
         # The GitHub (DataLad) mirrors are what the audit ran on; the OpenNeuro API
         # source (OpenNeuroSource) is a drop-in alternative.
-        from neurolake.bronze import ingest as land
-        from neurolake.sources import GitHubMirrorSource
+        # Not AirflowSkipException for unchanged datasets: a skipped upstream would
+        # skip transform too.
+        from neurolake.sources.github_mirror import ingest_mirror
 
-        with GitHubMirrorSource(dataset_id) as src:
-            r = land(src, LAKE)
+        force = bool(get_current_context()["params"].get("force", False))
+        r = ingest_mirror(dataset_id, None, LAKE, force=force)
         return {
+            "status": "skipped" if r.skipped else "ingested",
             "dataset_id": r.dataset_id,
             "snapshot": r.snapshot,
             "n_files": r.n_files,

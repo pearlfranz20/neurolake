@@ -53,6 +53,8 @@ pip install -e ".[dev]"
 
 neurolake demo                              # offline: synthetic fixtures -> data/report.html
 neurolake ingest-mirror ds000117 ds002718   # real OpenNeuro data via the GitHub mirrors
+neurolake ingest-mirror ds000117 ds002718   # again: unchanged datasets are skipped, not re-cloned
+neurolake ingest-mirror ds000117 --force    # re-ingest anyway (e.g. after changing ingest code)
 neurolake ingest-mirror ds000117 --snapshot first   # a dataset's first published snapshot
 neurolake transform && neurolake report     # build, test, report
 neurolake discover-mirrors --sample 50      # a reproducible random sample of accessions
@@ -69,6 +71,8 @@ make docs                                   # dbt docs site with the lineage gra
 **Subjects from both sides.** `dim_subject` is a full outer join of `participants.tsv` and the subjects that have data, with a flag for each side, so a subject missing from either stays queryable. Subjects whose data is all covered by `.bidsignore` count as having data.
 
 **Runs and snapshots.** Each ingest stages all five bronze tables outside the read path, then swaps them into its own `(dataset_id, snapshot)` partition with `raw_ingest_runs` last, under a per-dataset lock. Every bronze row carries its `run_id`, and staging reads only rows from each dataset's latest run, so a crash halfway through publishing never mixes two runs.
+
+**Incremental ingest.** `ingest-mirror` resolves the snapshot tag with one `git ls-remote` and skips the dataset, without cloning, when that tag is already the dataset's current run (the latest `finished_at` across its snapshots, ties broken by `run_id`, as in `stg_ingest_runs`) and the run is fully published: all five partitions exist and carry only its `run_id`, and `raw_files` and `raw_read_errors` hold the row counts it recorded. So a run that crashed mid-publish, or a partition that cannot be read, is re-ingested rather than failing, and after `--snapshot first` a default run brings the latest snapshot back. The check reads the Parquet directly and runs under the dataset lock, held through the clone and publish, so a parallel worker on the same dataset waits and then skips.
 
 **Failures.** A metadata file whose content is unusable (bad encoding, missing) is recorded in `raw_read_errors` and reported as a quality issue. Content that sits in git-annex and was not fetched is marked unknown rather than missing, and checks that depend on it are skipped. A network failure that outlasts the retries fails the run and leaves the previous data in place.
 
@@ -96,17 +100,18 @@ Rules live in `fct_dq_issue`, one CTE each, and are catalogued in `seeds/dq_rule
 ## Testing
 
 - **dbt:** every build runs schema tests (keys, relationships, accepted values), two singular tests and three dbt unit tests covering path parsing with stale-run filtering, sidecar override order with entity matching, and same-level ambiguity. Data defects become issue rows, never test failures, so one messy dataset cannot block the rest.
-- **pytest:** TSV parsing, idempotent re-ingest, read errors recorded versus outages failing the run, the OpenNeuro API client against a mock, and an end-to-end run over synthetic datasets. That run asserts that every injected defect is detected and that each real-world false positive found during the audit (`MUST_NOT_FLAG` in `neurolake/fixtures.py`) stays quiet.
+- **pytest:** TSV parsing, idempotent re-ingest, incremental skips (including half-published runs), read errors recorded versus outages failing the run, the OpenNeuro API client against a mock, and an end-to-end run over synthetic datasets. That run asserts that every injected defect is detected and that each real-world false positive found during the audit (`MUST_NOT_FLAG` in `neurolake/fixtures.py`) stays quiet.
 - **CI:** lint, tests and a demo run on Python 3.11 and 3.13, the QC report uploaded as a build artifact, and an Airflow 3 job that checks the DAG imports.
 
 ## Orchestration
 
-`dags/neurolake_openneuro.py` runs weekly: one dynamically mapped ingest task per dataset (at most 4 in parallel) from the GitHub mirrors, then `dbt build`, then the report. The dataset list is a DAG param, de-duplicated so two tasks never ingest the same dataset. It uses the Airflow 3 `airflow.sdk` API and falls back to the 2.x imports. `make airflow` starts a local standalone instance.
+`dags/neurolake_openneuro.py` runs weekly: one dynamically mapped ingest task per dataset (at most 4 in parallel) from the GitHub mirrors, then `dbt build`, then the report. The dataset list is a DAG param, de-duplicated so two tasks never ingest the same dataset. Unchanged datasets are skipped the same way as on the command line: the task succeeds with `status: "skipped"`, so `dbt build` still runs, and a `force` param re-ingests everything. It uses the Airflow 3 `airflow.sdk` API and falls back to the 2.x imports. `make airflow` starts a local standalone instance.
 
 ## Limits
 
 - The OpenNeuro API client (`ingest-openneuro`) follows the documented GraphQL API and is tested against a mock only. The GitHub mirror source is the one exercised on real data.
 - `participants.tsv` columns vary. The model extracts the BIDS-recommended ones (age, sex, handedness, group) and keeps the full row as JSON.
 - `IntendedFor` URIs into other datasets (`bids:<name>:...`) are recorded but not checked.
+- A skip trusts the snapshot tag, not the commit it points to, so a tag moved on the mirror is not picked up. Skipped datasets also keep bronze written by older ingest code. Use `--force` (or the DAG's `force` param) after either.
 - The per-dataset lock uses `fcntl`, so ingest runs on Linux and macOS.
 - This complements the official [bids-validator](https://github.com/bids-standard/bids-validator) rather than replacing it. It covers the problems that most often break pooled analyses, and makes them queryable across many datasets at once.

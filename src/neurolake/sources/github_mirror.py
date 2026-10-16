@@ -153,3 +153,15 @@ class GitHubMirrorSource:
 
     def __exit__(self, *exc) -> None:
         self.close()
+
+
+def ingest_mirror(dataset_id: str, snapshot: str | None, lake: str | Path, force: bool = False):
+    """Incremental ingest of one dataset from its mirror: resolve the tag with one
+    ls-remote, skip if that tag is already the dataset's current, fully published run
+    (unless `force`), and clone only otherwise. Returns a bronze.IngestResult."""
+    from .. import bronze  # imported here: bronze imports this package
+
+    tag = resolve_snapshot(dataset_id, snapshot)
+    return bronze.ingest_unless_current(
+        lake, dataset_id, tag, lambda: GitHubMirrorSource(dataset_id, tag), force=force
+    )

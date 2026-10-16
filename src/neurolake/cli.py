@@ -1,6 +1,7 @@
 """neurolake command line.
 
 neurolake ingest-openneuro ds000117 ds003097 --lake data/lake
+neurolake ingest-mirror ds000117 ds002718 [--force] --lake data/lake
 neurolake ingest-local ~/datasets/ds000117 --lake data/lake
 neurolake transform --lake data/lake
 neurolake report --lake data/lake --out data/report.html
@@ -17,7 +18,7 @@ import typer
 from . import bronze, fixtures
 from . import transform as transform_mod
 from .report import write_report
-from .sources import GitHubMirrorSource, LocalBidsSource, OpenNeuroSource
+from .sources import LocalBidsSource, OpenNeuroSource, github_mirror
 
 app = typer.Typer(add_completion=False, no_args_is_help=True, help="BIDS metadata lakehouse.")
 
@@ -56,13 +57,15 @@ def ingest_mirror(
     snapshot: str | None = typer.Option(
         None, help='Snapshot tag, or "first" / "latest" (the default) for each dataset.'
     ),
+    force: bool = typer.Option(False, "--force", help="Re-ingest even if the snapshot is already current."),
     workers: int = typer.Option(4, min=1, max=16, help="Datasets ingested in parallel."),
     lake: Path = LakeOpt,
 ):
     """Land OpenNeuro snapshots from their GitHub (DataLad) mirrors. No OpenNeuro API needed.
 
-    With several datasets a failure is reported and the rest carry on; the command
-    exits non-zero if any dataset failed."""
+    A dataset whose resolved snapshot is already its current, fully published run is
+    skipped without cloning; --force re-ingests it. With several datasets a failure is
+    reported and the rest carry on; the command exits non-zero if any dataset failed."""
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
     ids = list(dataset_ids or [])
@@ -76,13 +79,10 @@ def ingest_mirror(
     if snapshot not in (None, "first", "latest") and len(ids) > 1:
         raise typer.BadParameter("a specific --snapshot tag only makes sense with a single dataset")
 
-    def one(ds: str):
-        with GitHubMirrorSource(ds, snapshot) as src:
-            return bronze.ingest(src, lake)
-
+    n_ingested = n_skipped = 0
     failed = []
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = {pool.submit(one, ds): ds for ds in ids}
+        futures = {pool.submit(github_mirror.ingest_mirror, ds, snapshot, lake, force): ds for ds in ids}
         for fut in as_completed(futures):
             ds = futures[fut]
             try:
@@ -91,11 +91,16 @@ def ingest_mirror(
                 failed.append(ds)
                 typer.echo(f"{ds}  FAILED: {exc}", err=True)
                 continue
-            typer.echo(
-                f"{r.dataset_id}:{r.snapshot}  {r.n_files} files, "
-                f"{r.n_metadata_files} metadata, {r.n_read_errors} read errors"
-            )
-    typer.echo(f"{len(ids) - len(failed)}/{len(ids)} datasets ingested")
+            if r.skipped:
+                n_skipped += 1
+                typer.echo(f"{r.dataset_id}:{r.snapshot}  skipped (unchanged)")
+            else:
+                n_ingested += 1
+                typer.echo(
+                    f"{r.dataset_id}:{r.snapshot}  ingested: {r.n_files} files, "
+                    f"{r.n_metadata_files} metadata, {r.n_read_errors} read errors"
+                )
+    typer.echo(f"{n_ingested} ingested, {n_skipped} skipped, {len(failed)} failed")
     if failed:
         raise typer.Exit(code=1)
 

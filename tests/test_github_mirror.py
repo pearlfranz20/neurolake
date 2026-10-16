@@ -39,15 +39,14 @@ def test_cli_snapshot_validation(monkeypatch):
 
     seen = []
 
-    class FakeSource:
-        def __init__(self, ds, snapshot):
-            seen.append((ds, snapshot))
-            raise gm.MirrorError("stop before cloning")
+    def fake_resolve(ds, snapshot):
+        seen.append((ds, snapshot))
+        raise gm.MirrorError("stop before ls-remote")
 
-    monkeypatch.setattr(cli, "GitHubMirrorSource", FakeSource)
+    monkeypatch.setattr(gm, "resolve_snapshot", fake_resolve)
     runner = CliRunner()
     bad = runner.invoke(cli.app, ["ingest-mirror", "ds1", "ds2", "--snapshot", "1.0.0"])
     assert bad.exit_code != 0 and not seen
     ok = runner.invoke(cli.app, ["ingest-mirror", "ds1", "ds2", "--snapshot", "first"])
     assert sorted(seen) == [("ds1", "first"), ("ds2", "first")]
-    assert ok.exit_code == 1  # both "failed" at the fake source, and the command says so
+    assert ok.exit_code == 1  # both "failed" at the fake resolver, and the command says so
