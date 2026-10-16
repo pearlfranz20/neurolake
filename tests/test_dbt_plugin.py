@@ -36,7 +36,10 @@ def test_only_the_kept_value_is_searched_and_root_arrays():
 
 
 def test_deep_nesting_does_not_raise():
-    # json_valid accepts these, so a crash here would fail the whole dbt build
+    # json_valid accepts these, so a crash here would fail the whole dbt build. Whether
+    # Python's parser reaches this depth depends on the version (3.11 stops, 3.13 does
+    # not): either no repeats are found or the result is unknown (None), and
+    # stg_json_docs then keeps DuckDB's own reading.
     for doc in ("[" * 5000 + "]" * 5000, '{"a":' * 3000 + "1" + "}" * 3000):
-        assert duplicate_keys(doc) == []
+        assert duplicate_keys(doc) in ([], None)
         last_wins(doc)  # a value or None, never an exception
