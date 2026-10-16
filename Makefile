@@ -1,7 +1,8 @@
 LAKE ?= data/lake
 DATASETS ?= ds000001 ds000117 ds002718
+DATASETS_LAKE ?= data/history/latest/neurolake.duckdb
 
-.PHONY: install demo openneuro audit history transform report test lint docs airflow clean
+.PHONY: install demo openneuro audit history datasets datasets-export transform report test lint docs airflow clean
 
 install:            ## editable install with dev tools
 	pip install -e ".[dev]"
@@ -27,6 +28,13 @@ history:            ## first vs latest snapshot of every audited dataset (run af
 	python audit/history.py ingest
 	python audit/history.py analyze
 	python audit/render.py
+
+datasets:           ## per-dataset pages in docs/datasets, from the committed audit/datasets.json
+	python audit/datasets.py render
+
+datasets-export:    ## re-export audit/datasets.json from the lake, then render (run after `make history`)
+	python audit/datasets.py export $(DATASETS_LAKE)
+	python audit/datasets.py render
 
 transform:
 	neurolake transform --lake $(LAKE)

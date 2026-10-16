@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ds005697: PerceiveImagine</title>
+<meta name="description" content="BIDS metadata findings for OpenNeuro ds005697 snapshot 1.0.2.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<nav class="crumbs" aria-label="Breadcrumb"><a href="../index.html">OpenNeuro metadata audit</a><a href="index.html">All datasets</a></nav>
+<header>
+<span class="eyebrow">ds005697 &middot; snapshot 1.0.2</span>
+<h1>PerceiveImagine</h1>
+<p class="lede"><a href="https://openneuro.org/datasets/ds005697/versions/1.0.2">View ds005697 1.0.2 on OpenNeuro</a></p>
+</header>
+<dl class="facts"><div><dt>Snapshot</dt><dd><a href="https://openneuro.org/datasets/ds005697/versions/1.0.2">1.0.2</a></dd></div><div><dt>Snapshot date</dt><dd>2024-12-10</dd></div><div><dt>Type</dt><dd>raw</dd></div><div><dt>BIDS version</dt><dd>1.8.0</dd></div><div><dt>Subjects</dt><dd>51</dd></div><div><dt>Data files</dt><dd>51</dd></div><div><dt>Size described</dt><dd>71.5 GB</dd></div><div><dt>Datatypes</dt><dd>eeg</dd></div><div><dt>Errors</dt><dd>5</dd></div><div><dt>Warnings</dt><dd>1</dd></div><div><dt>Info</dt><dd>0</dd></div><div><dt>Status</dt><dd><span class="status errors">errors</span></dd></div><div><dt>Since first snapshot (1.0.0)</dt><dd><span class="change worse">warnings only to errors</span></dd></div></dl>
+<section>
+<h2>Findings</h2>
+<p>2 rules fired, most severe first. Each rule shows up to 25 affected objects, with all of their findings.</p><div class="findings"><article class="rule"><h3><span class="sev error">error</span>Required sidecar field missing<span class="n">5 findings</span></h3><p class="desc">A field the BIDS schema marks REQUIRED for this datatype is not set by any applicable sidecar (skipped when a sidecar was not fetched) <span class="id">missing_required_sidecar_field</span></p><ul class="ex"><li><code>sub-16/eeg/sub-16_task-PerceiveImagine_eeg.set</code><span class="d">EEGReference, PowerLineFrequency, SamplingFrequency, SoftwareFilters, TaskName (REQUIRED) not set by any applicable sidecar</span></li></ul></article><article class="rule"><h3><span class="sev warning">warning</span>Subject missing from participants.tsv<span class="n">1 finding</span></h3><p class="desc">A subject has data files but no row in participants.tsv <span class="id">subject_missing_from_participants</span></p><p class="desc">1 data files but no participants.tsv row</p><ul class="ex"><li><code>sub-16</code></li></ul></article></div>
+</section>
+<footer><a href="index.html">All datasets</a> &middot; <a href="../index.html">The audit</a>. Generated from <span class="mono">audit/datasets.json</span>.</footer>
+</main>
+</body>
+</html>

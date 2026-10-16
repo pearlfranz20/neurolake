@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ds005003: Retrospective Task/Rest fMRI Data from Tumor Patients</title>
+<meta name="description" content="BIDS metadata findings for OpenNeuro ds005003 snapshot 2.0.0.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<nav class="crumbs" aria-label="Breadcrumb"><a href="../index.html">OpenNeuro metadata audit</a><a href="index.html">All datasets</a></nav>
+<header>
+<span class="eyebrow">ds005003 &middot; snapshot 2.0.0</span>
+<h1>Retrospective Task/Rest fMRI Data from Tumor Patients</h1>
+<p class="lede"><a href="https://openneuro.org/datasets/ds005003/versions/2.0.0">View ds005003 2.0.0 on OpenNeuro</a></p>
+</header>
+<dl class="facts"><div><dt>Snapshot</dt><dd><a href="https://openneuro.org/datasets/ds005003/versions/2.0.0">2.0.0</a></dd></div><div><dt>Snapshot date</dt><dd>2025-02-22</dd></div><div><dt>Type</dt><dd>raw</dd></div><div><dt>BIDS version</dt><dd>1.8.0</dd></div><div><dt>Subjects</dt><dd>42</dd></div><div><dt>Data files</dt><dd>222</dd></div><div><dt>Size described</dt><dd>6.9 GB</dd></div><div><dt>Datatypes</dt><dd>anat, func</dd></div><div><dt>Errors</dt><dd>0</dd></div><div><dt>Warnings</dt><dd>6</dd></div><div><dt>Info</dt><dd>0</dd></div><div><dt>Status</dt><dd><span class="status warnings">warnings only</span></dd></div><div><dt>Since first snapshot (1.0.0)</dt><dd><span class="change worse">5 to 6 findings</span></dd></div></dl>
+<section>
+<h2>Findings</h2>
+<p>4 rules fired, most severe first. Each rule shows up to 25 affected objects, with all of their findings.</p><div class="findings"><article class="rule"><h3><span class="sev warning">warning</span>TRs differ within a task<span class="n">3 findings</span></h3><p class="desc">BOLD runs of the same task and acquisition use RepetitionTime values more than 0.5% apart <span class="id">inconsistent_repetition_time</span></p><ul class="ex"><li><code>task-language</code><span class="d">RepetitionTime values: 2.2, 2.55, 2.73, 2.7431, 3.0 across 36 runs</span></li><li><code>task-motor</code><span class="d">RepetitionTime values: 2.2, 2.55, 2.6, 2.73, 2.7431, 3.0, 3.06 across 38 runs</span></li><li><code>task-rest</code><span class="d">RepetitionTime values: 2.16, 2.17, 2.2, 2.33, 2.38, 2.5, 2.53, 2.56, 2.6, 2.7231, 3.01, 3.53 across 82 runs</span></li></ul></article><article class="rule"><h3><span class="sev warning">warning</span>.bidsignore matches core files<span class="n">1 finding</span></h3><p class="desc">A .bidsignore pattern also matches core files such as dataset_description.json (they were kept) <span class="id">bidsignore_matches_core_files</span></p><p class="desc">patterns match core files, which were kept: README</p><ul class="ex"><li><code>.bidsignore</code></li></ul></article><article class="rule"><h3><span class="sev warning">warning</span>No participants.tsv<span class="n">1 finding</span></h3><p class="desc">The dataset has subjects but no participants.tsv <span class="id">missing_participants_tsv</span></p><p class="desc">dataset has subjects but no participants.tsv</p><ul class="ex"><li><code>participants.tsv</code></li></ul></article><article class="rule"><h3><span class="sev warning">warning</span>Recommended sidecar field missing<span class="n">1 finding</span></h3><p class="desc">A field the BIDS schema marks RECOMMENDED for this datatype is not set by any applicable sidecar <span class="id">missing_recommended_sidecar_field</span></p><p class="desc">MagneticFieldStrength (RECOMMENDED) not set by any applicable sidecar</p><ul class="ex"><li><code>sub-RS020/ses-1/anat/sub-RS020_ses-1_T1w.nii.gz</code></li></ul></article></div>
+</section>
+<footer><a href="index.html">All datasets</a> &middot; <a href="../index.html">The audit</a>. Generated from <span class="mono">audit/datasets.json</span>.</footer>
+</main>
+</body>
+</html>
