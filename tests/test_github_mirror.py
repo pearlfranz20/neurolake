@@ -30,3 +30,24 @@ def test_resolve_snapshot(monkeypatch):
     monkeypatch.setattr(gm, "list_tags", lambda ds: [])
     with pytest.raises(gm.MirrorError):
         gm.resolve_snapshot("ds1", "first")
+
+
+def test_cli_snapshot_validation(monkeypatch):
+    from typer.testing import CliRunner
+
+    from neurolake import cli
+
+    seen = []
+
+    class FakeSource:
+        def __init__(self, ds, snapshot):
+            seen.append((ds, snapshot))
+            raise gm.MirrorError("stop before cloning")
+
+    monkeypatch.setattr(cli, "GitHubMirrorSource", FakeSource)
+    runner = CliRunner()
+    bad = runner.invoke(cli.app, ["ingest-mirror", "ds1", "ds2", "--snapshot", "1.0.0"])
+    assert bad.exit_code != 0 and not seen
+    ok = runner.invoke(cli.app, ["ingest-mirror", "ds1", "ds2", "--snapshot", "first"])
+    assert sorted(seen) == [("ds1", "first"), ("ds2", "first")]
+    assert ok.exit_code == 1  # both "failed" at the fake source, and the command says so

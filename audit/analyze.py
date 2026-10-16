@@ -70,7 +70,7 @@ SQL = {
                count(distinct dataset_id) as datasets, count(*) as files
         from marts.fct_dq_issue
         where rule_id in ('missing_required_sidecar_field', 'missing_recommended_sidecar_field')
-        group by all order by datasets desc
+        group by all order by datasets desc, files desc, field
     """,
     "by_year": """
         with per as (

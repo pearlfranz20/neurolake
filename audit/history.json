@@ -55,9 +55,11 @@
       "first_scans": 543,
       "latest_scans": 543,
       "data_grew": false,
+      "data_shrank": false,
       "resolved": 1275,
       "introduced": 0,
       "resolved_objects": 255,
+      "participants_lost_data": 0,
       "resolved_rules": [
         "missing_required_sidecar_field"
       ],
@@ -70,9 +72,11 @@
       "first_scans": 4,
       "latest_scans": 116,
       "data_grew": true,
+      "data_shrank": false,
       "resolved": 28,
       "introduced": 28,
       "resolved_objects": 28,
+      "participants_lost_data": 0,
       "resolved_rules": [
         "participant_without_data"
       ],
@@ -87,9 +91,11 @@
       "first_scans": 32,
       "latest_scans": 335,
       "data_grew": true,
+      "data_shrank": false,
       "resolved": 27,
       "introduced": 0,
       "resolved_objects": 27,
+      "participants_lost_data": 0,
       "resolved_rules": [
         "participant_without_data"
       ],
@@ -102,31 +108,15 @@
       "first_scans": 238,
       "latest_scans": 240,
       "data_grew": false,
+      "data_shrank": false,
       "resolved": 3,
       "introduced": 0,
       "resolved_objects": 3,
+      "participants_lost_data": 0,
       "resolved_rules": [
         "inconsistent_sampling_frequency"
       ],
       "introduced_rules": null
-    },
-    {
-      "dataset_id": "ds005003",
-      "first_snapshot": "1.0.0",
-      "latest_snapshot": "2.0.0",
-      "first_scans": 217,
-      "latest_scans": 222,
-      "data_grew": false,
-      "resolved": 3,
-      "introduced": 4,
-      "resolved_objects": 3,
-      "resolved_rules": [
-        "inconsistent_repetition_time"
-      ],
-      "introduced_rules": [
-        "bidsignore_matches_core_files",
-        "inconsistent_repetition_time"
-      ]
     },
     {
       "dataset_id": "ds002338",
@@ -135,9 +125,11 @@
       "first_scans": 176,
       "latest_scans": 187,
       "data_grew": false,
+      "data_shrank": false,
       "resolved": 1,
       "introduced": 0,
       "resolved_objects": 1,
+      "participants_lost_data": 0,
       "resolved_rules": [
         "participant_without_data"
       ],
@@ -150,9 +142,11 @@
       "first_scans": 126,
       "latest_scans": 126,
       "data_grew": false,
+      "data_shrank": false,
       "resolved": 1,
       "introduced": 0,
       "resolved_objects": 1,
+      "participants_lost_data": 0,
       "resolved_rules": [
         "missing_participants_tsv"
       ],
@@ -165,9 +159,11 @@
       "first_scans": 330,
       "latest_scans": 0,
       "data_grew": false,
+      "data_shrank": true,
       "resolved": 1,
       "introduced": 2,
       "resolved_objects": 1,
+      "participants_lost_data": 0,
       "resolved_rules": [
         "missing_participants_tsv"
       ],
@@ -183,30 +179,15 @@
       "first_scans": 2,
       "latest_scans": 140,
       "data_grew": true,
+      "data_shrank": false,
       "resolved": 1,
       "introduced": 0,
       "resolved_objects": 1,
+      "participants_lost_data": 0,
       "resolved_rules": [
         "missing_recommended_sidecar_field"
       ],
       "introduced_rules": null
-    },
-    {
-      "dataset_id": "ds004902",
-      "first_snapshot": "1.0.0",
-      "latest_snapshot": "1.0.8",
-      "first_scans": 211,
-      "latest_scans": 218,
-      "data_grew": false,
-      "resolved": 1,
-      "introduced": 1,
-      "resolved_objects": 1,
-      "resolved_rules": [
-        "inconsistent_sampling_frequency"
-      ],
-      "introduced_rules": [
-        "inconsistent_sampling_frequency"
-      ]
     },
     {
       "dataset_id": "ds005047",
@@ -215,9 +196,11 @@
       "first_scans": 839,
       "latest_scans": 840,
       "data_grew": false,
+      "data_shrank": false,
       "resolved": 1,
       "introduced": 0,
       "resolved_objects": 1,
+      "participants_lost_data": 0,
       "resolved_rules": [
         "scans_tsv_missing_file"
       ],
@@ -230,9 +213,11 @@
       "first_scans": 1735,
       "latest_scans": 1735,
       "data_grew": false,
+      "data_shrank": false,
       "resolved": 1,
       "introduced": 0,
       "resolved_objects": 1,
+      "participants_lost_data": 0,
       "resolved_rules": [
         "missing_participants_tsv"
       ],
@@ -245,9 +230,11 @@
       "first_scans": 49,
       "latest_scans": 51,
       "data_grew": false,
+      "data_shrank": false,
       "resolved": 1,
       "introduced": 6,
       "resolved_objects": 1,
+      "participants_lost_data": 0,
       "resolved_rules": [
         "participant_without_data"
       ],
@@ -263,9 +250,11 @@
       "first_scans": 75,
       "latest_scans": 1047,
       "data_grew": true,
+      "data_shrank": false,
       "resolved": 1,
       "introduced": 1,
       "resolved_objects": 1,
+      "participants_lost_data": 0,
       "resolved_rules": [
         "missing_participants_tsv"
       ],
@@ -280,9 +269,11 @@
       "first_scans": 216,
       "latest_scans": 132,
       "data_grew": false,
+      "data_shrank": true,
       "resolved": 0,
       "introduced": 7,
       "resolved_objects": 0,
+      "participants_lost_data": 7,
       "resolved_rules": null,
       "introduced_rules": [
         "participant_without_data"
@@ -295,41 +286,70 @@
       "first_scans": 141,
       "latest_scans": 142,
       "data_grew": false,
+      "data_shrank": false,
       "resolved": 0,
       "introduced": 1,
       "resolved_objects": 0,
+      "participants_lost_data": 0,
       "resolved_rules": null,
       "introduced_rules": [
         "missing_recommended_sidecar_field"
       ]
+    },
+    {
+      "dataset_id": "ds005003",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "2.0.0",
+      "first_scans": 217,
+      "latest_scans": 222,
+      "data_grew": false,
+      "data_shrank": false,
+      "resolved": 0,
+      "introduced": 1,
+      "resolved_objects": 0,
+      "participants_lost_data": 0,
+      "resolved_rules": null,
+      "introduced_rules": [
+        "bidsignore_matches_core_files"
+      ]
     }
   ],
   "changed_summary": {
-    "datasets": 16,
+    "datasets": 15,
     "data_grew": 4,
     "only_resolved": 8,
-    "only_introduced": 2,
-    "both": 6,
-    "max_resolved_one_dataset": 1275,
-    "top_resolver": "ds003768",
-    "resolved": 1345,
-    "introduced": 50
+    "only_introduced": 3,
+    "both": 4,
+    "grew_and_cleared_participant_without_data": 2,
+    "resolved": 1341,
+    "introduced": 46,
+    "same_count_but_changed": 2
+  },
+  "top_resolver": {
+    "dataset_id": "ds003768",
+    "objects": 255,
+    "per_object_min": 5,
+    "per_object_max": 5,
+    "resolved": 1275,
+    "rules": [
+      "missing_required_sidecar_field"
+    ]
   },
   "issue_fates": [
     {
       "fate": "introduced",
-      "issues": 50,
-      "datasets": 8
+      "issues": 46,
+      "datasets": 7
     },
     {
       "fate": "persisting",
-      "issues": 632,
-      "datasets": 33
+      "issues": 636,
+      "datasets": 34
     },
     {
       "fate": "resolved",
-      "issues": 1345,
-      "datasets": 14
+      "issues": 1341,
+      "datasets": 12
     }
   ],
   "rules": [

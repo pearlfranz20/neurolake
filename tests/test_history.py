@@ -1,5 +1,6 @@
 """The snapshot comparison in audit/history.py, on two builds of the fixtures: the
-"latest" build fixes one defect in ds900003 and introduces another."""
+"latest" build fixes one defect in ds900003 and introduces another, and adds a run to
+ds900001 that changes the count in a finding's detail without changing the finding."""
 
 import importlib.util
 from pathlib import Path
@@ -28,6 +29,9 @@ def result(tmp_path_factory):
                 # introduced: a new subject with data but no participants row
                 (ds_root / "sub-03" / "anat").mkdir(parents=True)
                 (ds_root / "sub-03" / "anat" / "sub-03_T1w.nii.gz").write_bytes(b"\0" * 64)
+            if side == "latest" and ds_root.name == "ds900001":
+                # same TR inconsistency, now "across N+1 runs": must not count as fixed + new
+                (ds_root / "sub-01" / "func" / "sub-01_task-nback_run-3_bold.nii.gz").write_bytes(b"\0" * 64)
             bronze.ingest(LocalBidsSource(ds_root, snapshot=snapshot), root / side)
         run_dbt(root / side, ["build", "--quiet"])
     return history.analyze(str(root), str(root / "history.json"))
@@ -48,9 +52,16 @@ def test_fix_and_regression_are_attributed(result):
     assert fates["introduced"]["datasets"] == 1
 
 
+def test_count_in_detail_does_not_make_a_change(result):
+    changed = {c["dataset_id"] for c in result["changed"]}
+    assert changed == {"ds900003"}
+    rules = {r["rule_id"]: r for r in result["rules"]}
+    assert rules["inconsistent_repetition_time"]["cleared"] == 0
+
+
 def test_untouched_datasets_are_unchanged(result):
     for d in result["datasets"]:
-        if d["dataset_id"] != "ds900003":
+        if d["dataset_id"] not in ("ds900001", "ds900003"):
             assert (d["first_errors"], d["first_warnings"]) == (d["latest_errors"], d["latest_warnings"])
 
 

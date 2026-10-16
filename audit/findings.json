@@ -303,12 +303,6 @@
       "files": 711
     },
     {
-      "field": "SoftwareFilters (REQUIRED)",
-      "severity": "error",
-      "datasets": 4,
-      "files": 226
-    },
-    {
       "field": "PowerLineFrequency (REQUIRED)",
       "severity": "error",
       "datasets": 4,
@@ -316,6 +310,12 @@
     },
     {
       "field": "SamplingFrequency (REQUIRED)",
+      "severity": "error",
+      "datasets": 4,
+      "files": 226
+    },
+    {
+      "field": "SoftwareFilters (REQUIRED)",
       "severity": "error",
       "datasets": 4,
       "files": 226

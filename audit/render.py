@@ -244,14 +244,20 @@ def _status(errors: int, warnings: int) -> str:
 
 
 def history_section(hx: dict) -> list[str]:
-    """Do datasets get cleaner after first publication? From audit/history.json."""
+    """Do datasets get cleaner after first publication? From audit/history.json.
+
+    Only first and latest snapshots are compared, so changes are dated "by" the latest
+    snapshot, never "in" it. Every judgement word is guarded by the number behind it."""
     s = hx["sample"]
     n = s["cohort"]
     t = hx["transitions"]
     cs = hx["changed_summary"]
     st = {(r["side"], r["status"]): r["datasets"] for r in hx["status"]}
-    changed = {c["dataset_id"]: c for c in hx["changed"]}
-    top = changed[cs["top_resolver"]]
+    first_clean, latest_clean = st.get(("first", "clean"), 0), st.get(("latest", "clean"), 0)
+    first_err, latest_err = st.get(("first", "errors"), 0), st.get(("latest", "errors"), 0)
+    unchanged = n - cs["datasets"]
+    p_sign = hx["sign_test"]["p_two_sided"]
+    top = hx.get("top_resolver")
     states = ("clean", "warnings only", "errors")
     grid = {(a, b): 0 for a in states for b in states}
     for d in hx["datasets"]:
@@ -266,56 +272,115 @@ def history_section(hx: dict) -> list[str]:
         f"<tr><td>{e(a)}</td>" + "".join(f'<td class="num">{grid[(a, b)]}</td>' for b in states) + "</tr>"
         for a in states
     )
+
+    excluded = s["multi_snapshot"] - n
+    cohort_note = (
+        f"all {n} are raw datasets"
+        if not excluded
+        else f"{n} of them are raw datasets (derivatives are left out)"
+    )
+    errors_text = (
+        f"the number with errors is {first_err} at both ends"
+        if first_err == latest_err
+        else f"the number with errors goes from {first_err} to {latest_err}"
+    )
+    chance = (
+        f"which is well within chance (sign test p = {p_sign:.2f})"
+        if p_sign >= 0.2
+        else f"(sign test p = {p_sign:.2f})"
+    )
+    lead = "Updates rarely touch the metadata. " if unchanged >= 0.75 * n else ""
+
     out = [
         "<section>",
         "<h2>Do datasets get cleaner after release?</h2>",
         f"<p>The year comparison above uses each dataset's latest snapshot, which mixes when a dataset was "
         f"published with how much it was revised. To separate the two I ran the same rules on the first "
         f"published snapshot of every dataset in the sample. {s['multi_snapshot']} of the {s['datasets']} "
-        f"have been updated at least once, a median of {s['median_years_between']:g} years apart, and all "
-        f"{n} are raw datasets.</p>",
-        f"<p>Updates rarely touch the metadata. {t['same_issues']} of the {n} updated datasets have exactly "
-        f"as many findings in their latest snapshot as in their first, and only {cs['datasets']} changed at "
-        f"all. The share that is fully clean moves from {pct(st[('first', 'clean')], n)} to "
-        f"{pct(st[('latest', 'clean')], n)} ({st[('first', 'clean')]} to {st[('latest', 'clean')]}), and "
-        f"the number with errors is {st[('first', 'errors')]} at both ends: {t['errors_fixed']} fixed, "
-        f"{t['errors_introduced']} introduced. Datasets that ended with fewer findings outnumber those that "
-        f"ended with more, {t['fewer_issues']} to {t['more_issues']}, which is well within chance "
-        f"(sign test p = {hx['sign_test']['p_two_sided']:.2f}).</p>",
+        f"have been updated at least once, a median of {s['median_years_between']:g} years apart, and "
+        f"{cohort_note}.</p>",
+        f"<p>{lead}In {unchanged} of the {n} updated datasets every finding is the same in the latest "
+        f"snapshot as in the first. The share that is fully clean moves from {pct(first_clean, n)} to "
+        f"{pct(latest_clean, n)} ({first_clean} to {latest_clean}), and {errors_text}: "
+        f"{t['errors_fixed']} fixed, {t['errors_introduced']} introduced. Datasets that ended with fewer "
+        f"findings outnumber those that ended with more, {t['fewer_issues']} to {t['more_issues']}, "
+        f"{chance}.</p>"
+        if t["fewer_issues"] > t["more_issues"]
+        else f"<p>{lead}In {unchanged} of the {n} updated datasets every finding is the same in the latest "
+        f"snapshot as in the first. The share that is fully clean moves from {pct(first_clean, n)} to "
+        f"{pct(latest_clean, n)}, and {errors_text}. {t['fewer_issues']} datasets ended with fewer findings "
+        f"and {t['more_issues']} with more {chance}.</p>",
         "<figure>",
         '<div class="chart"><div class="table-wrap" style="margin-top:0"><table>'
         f"<thead><tr><th>First snapshot</th>{head}</tr></thead><tbody>{body}</tbody></table></div></div>",
         f"<figcaption>Status of the {n} updated datasets at their first snapshot (rows) and latest snapshot "
         "(columns). The diagonal is datasets whose status did not change.</figcaption>",
         "</figure>",
-        f"<p>Counting individual findings would tell a much rosier story: {fmt(cs['resolved'])} resolved "
-        f"against {cs['introduced']} introduced. But {fmt(top['resolved'])} of those come from one dataset, "
-        f"<code>{e(top['dataset_id'])}</code>, which shipped {top['resolved_objects']} EEG recordings without "
-        f"sidecars ({top['resolved'] // top['resolved_objects']} required fields each) and added task-level ones in {e(top['latest_snapshot'])}. Several other improvements are "
-        f"not metadata fixes either. In {cs['data_grew']} of the {cs['datasets']} changed datasets the latest "
-        "snapshot has at least half again as many data files as the first, so the update finished an "
-        "incomplete upload, and listed participants simply gained their data.</p>",
     ]
+
+    counts = (
+        f"<p>Counting individual findings tells a different story: {fmt(cs['resolved'])} resolved against "
+        f"{fmt(cs['introduced'])} introduced."
+    )
+    if top and top["resolved"] > cs["resolved"] / 2:
+        tc = next(c for c in hx["changed"] if c["dataset_id"] == top["dataset_id"])
+        k = (
+            str(top["per_object_min"])
+            if top["per_object_min"] == top["per_object_max"]
+            else f"{top['per_object_min']} to {top['per_object_max']}"
+        )
+        if top["rules"] == ["missing_required_sidecar_field"]:
+            detail = (
+                f"{top['objects']} recordings that each lacked {k} required sidecar fields in its first "
+                f"snapshot ({e(tc['first_snapshot'])}) and have them all by {e(tc['latest_snapshot'])}"
+            )
+        else:
+            detail = (
+                f"{top['objects']} files with {k} findings each that are gone by {e(tc['latest_snapshot'])}"
+            )
+        counts += (
+            f" But {fmt(top['resolved'])} of those come from one dataset, <code>{e(top['dataset_id'])}</code>: "
+            f"{detail}."
+        )
+    if cs["data_grew"]:
+        counts += (
+            f" Some improvements are not metadata fixes. In {cs['data_grew']} of the {cs['datasets']} datasets "
+            "whose findings changed, the latest snapshot has at least half again as many data files as the "
+            "first, which points to an unfinished first upload"
+        )
+        k = cs["grew_and_cleared_participant_without_data"]
+        counts += (
+            f", and in {k} of them the gain is listed participants that simply received their data.</p>"
+            if k
+            else ".</p>"
+        )
+    else:
+        counts += "</p>"
+    out.append(counts)
+
     regress = []
-    if "ds004103" in changed:
-        regress.append(
-            "<code>ds004103</code> added a bare <code>*</code> to its <code>.bidsignore</code> in "
-            f"{e(changed['ds004103']['latest_snapshot'])}, so every file in the current release is "
-            "hidden from validation"
-        )
-    if "ds001619" in changed:
-        c = changed["ds001619"]
-        regress.append(
-            f"<code>ds001619</code> removed {c['introduced']} subject folders in {e(c['latest_snapshot'])} "
-            "but kept them in <code>participants.tsv</code>"
-        )
+    for c in hx["changed"]:
+        intro = c["introduced_rules"] or []
+        if "bidsignore_hides_all_data" in intro:
+            regress.append(
+                f"By {e(c['latest_snapshot'])}, <code>{e(c['dataset_id'])}</code> has a "
+                "<code>.bidsignore</code> that covers every data file, so none of its recordings are "
+                f"checked any more. Its first snapshot ({e(c['first_snapshot'])}) had no such pattern."
+            )
+        if c["participants_lost_data"] and c["data_shrank"]:
+            regress.append(
+                f"<code>{e(c['dataset_id'])}</code> has fewer data files by {e(c['latest_snapshot'])}, and "
+                f"{c['participants_lost_data']} people still listed in its <code>participants.tsv</code> "
+                "no longer have any data."
+            )
     if regress:
-        out.append(f"<p>Updates also break things. {'. '.join(regress)}.</p>")
-    out += [
-        "<p>The practical reading: problems present at first upload tend to stay, so the cheapest "
-        "place to catch them is before the first snapshot is published.</p>",
-        "</section>",
-    ]
+        out.append(f"<p>Updates also break things. {' '.join(regress)}</p>")
+    if unchanged >= 0.75 * n:
+        out.append(
+            "<p>The practical reading: problems present at first upload tend to stay, so the cheapest "
+            "place to catch them is before the first snapshot is published.</p>"
+        )
+    out.append("</section>")
     return out
 
 

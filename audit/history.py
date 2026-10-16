@@ -11,9 +11,12 @@ into separate lakes, <lake_root>/first and <lake_root>/latest, and builds both w
 dbt. The same models and rules run on both, so any difference comes from the data.
 
 `analyze` compares the two quality pictures, restricted to raw datasets with more
-than one snapshot. An issue is matched across snapshots by its rule, object and
-detail (fct_dq_issue.issue_id), so renaming a file counts as one fix and one new
-issue. Dataset-level answers use rule counts, which are immune to that.
+than one snapshot. A finding is matched across snapshots by its rule, object and
+detail, except for rules whose detail only summarises one object (counts, value
+lists): those match on rule and object, so "across 139 recordings" becoming "across
+142 recordings" is the same finding, not a fix plus a new one. Renaming a file still
+counts as one fix and one new finding; dataset-level answers use finding counts,
+which are immune to that.
 """
 
 from __future__ import annotations
@@ -90,8 +93,22 @@ _PER_DATASET = """
     group by all
 """
 
+# Rules that emit at most one finding per object, with a detail that summarises it
+# (counts, value lists). The detail changes whenever data is added, so it is left
+# out of the key that matches findings across snapshots.
+SUMMARY_RULES = (
+    "inconsistent_repetition_time",
+    "inconsistent_sampling_frequency",
+    "subject_missing_from_participants",
+    "participant_id_without_prefix",
+    "duplicate_participant_id",
+    "bidsignore_hides_all_data",
+)
+
 _ISSUES = """
-    select dataset_id, issue_id, rule_id, severity, object_id
+    select dataset_id, rule_id, severity, object_id,
+           concat_ws('|', rule_id, object_id,
+                     case when rule_id in {summary_rules} then '' else detail end) as match_key
     from {side}.marts.fct_dq_issue
     where severity in ('error', 'warning')
 """
@@ -102,7 +119,14 @@ def analyze(root: str = "data/history", out: str = "audit/history.json") -> dict
     for side in SIDES:
         con.execute(f"attach '{Path(root) / side / 'neurolake.duckdb'}' as {side} (read_only)")
         con.execute(f"create temp table ds_{side} as {_PER_DATASET.format(side=side)}")
-        con.execute(f"create temp table iss_{side} as {_ISSUES.format(side=side)}")
+        con.execute(
+            f"create temp table iss_{side} as {_ISSUES.format(side=side, summary_rules=SUMMARY_RULES)}"
+        )
+        dupes = con.execute(
+            f"select count(*) - count(distinct (dataset_id, match_key)) from iss_{side}"
+        ).fetchone()[0]
+        if dupes:
+            raise SystemExit(f"{side}: {dupes} findings share a match key; extend SUMMARY_RULES logic")
 
     # Raw in both snapshots, and actually different snapshots.
     con.execute("""
@@ -168,22 +192,27 @@ def analyze(root: str = "data/history", out: str = "audit/history.json") -> dict
         select coalesce(f.dataset_id, l.dataset_id) as dataset_id,
                coalesce(f.rule_id, l.rule_id) as rule_id,
                coalesce(f.object_id, l.object_id) as object_id,
-               case when l.issue_id is null then 'resolved'
-                    when f.issue_id is null then 'introduced' else 'persisting' end as fate
+               case when l.match_key is null then 'resolved'
+                    when f.match_key is null then 'introduced' else 'persisting' end as fate
         from (select * from iss_first where dataset_id in (select dataset_id from cohort)) f
         full outer join (select * from iss_latest where dataset_id in (select dataset_id from cohort)) l
-          on f.dataset_id = l.dataset_id and f.issue_id = l.issue_id
+          on f.dataset_id = l.dataset_id and f.match_key = l.match_key
     """)
     # Datasets whose findings changed at all, and why: an update that adds most of the
     # data (an unfinished first upload) clears "participant has no data" without any
-    # metadata being fixed, so data growth is reported next to every change.
+    # metadata being fixed, so data growth is reported next to every change. A dataset
+    # with no data files at first "grew" if it has any later.
     con.execute("""
         create temp table changed as
         select c.dataset_id, c.first_snapshot, c.latest_snapshot, c.first_scans, c.latest_scans,
-               coalesce(c.latest_scans >= 1.5 * c.first_scans, false) as data_grew,
+               case when coalesce(c.first_scans, 0) = 0 then coalesce(c.latest_scans, 0) > 0
+                    else coalesce(c.latest_scans >= 1.5 * c.first_scans, false) end as data_grew,
+               coalesce(c.latest_scans < c.first_scans, false) as data_shrank,
                count(*) filter (where m.fate = 'resolved') as resolved,
                count(*) filter (where m.fate = 'introduced') as introduced,
                count(distinct m.object_id) filter (where m.fate = 'resolved') as resolved_objects,
+               count(*) filter (where m.fate = 'introduced' and m.rule_id = 'participant_without_data')
+                   as participants_lost_data,
                list(distinct m.rule_id order by m.rule_id) filter (where m.fate = 'resolved')
                    as resolved_rules,
                list(distinct m.rule_id order by m.rule_id) filter (where m.fate = 'introduced')
@@ -199,11 +228,30 @@ def analyze(root: str = "data/history", out: str = "audit/history.json") -> dict
                count(*) filter (where resolved > 0 and introduced = 0) as only_resolved,
                count(*) filter (where introduced > 0 and resolved = 0) as only_introduced,
                count(*) filter (where resolved > 0 and introduced > 0) as both,
-               max(resolved) as max_resolved_one_dataset,
-               arg_max(dataset_id, resolved) as top_resolver,
+               count(*) filter (where data_grew and list_contains(resolved_rules, 'participant_without_data'))
+                   as grew_and_cleared_participant_without_data,
                sum(resolved) as resolved, sum(introduced) as introduced
         from changed
     """)[0]
+    result["changed_summary"]["same_count_but_changed"] = q("""
+        select count(*) as n from changed join cohort using (dataset_id)
+        where first_errors + first_warnings = latest_errors + latest_warnings
+    """)[0]["n"]
+    # The dataset that accounts for most resolved findings, and how many findings each of
+    # its resolved objects carried (min and max, so the page never assumes they are equal).
+    top = q("select dataset_id from changed order by resolved desc, dataset_id limit 1")
+    if top:
+        result["top_resolver"] = q(f"""
+            with per_object as (
+                select object_id, count(*) as n from matched
+                where dataset_id = '{top[0]["dataset_id"]}' and fate = 'resolved' group by object_id
+            )
+            select '{top[0]["dataset_id"]}' as dataset_id, count(*) as objects,
+                   min(n) as per_object_min, max(n) as per_object_max, sum(n) as resolved,
+                   (select list(distinct rule_id order by rule_id) from matched
+                    where dataset_id = '{top[0]["dataset_id"]}' and fate = 'resolved') as rules
+            from per_object
+        """)[0]
 
     result["issue_fates"] = q("""
         select fate, count(*) as issues, count(distinct dataset_id) as datasets
