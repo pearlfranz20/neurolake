@@ -60,7 +60,7 @@
   "headline": [
     {
       "raw_datasets": 148,
-      "with_errors": 11,
+      "with_errors": 10,
       "with_warnings": 68,
       "clean": 76
     }
@@ -83,25 +83,17 @@
       "issues": 1130
     },
     {
-      "rule_id": "fieldmap_intended_for_missing_target",
+      "rule_id": "duplicate_participant_id",
       "severity": "error",
-      "description": "A fieldmap IntendedFor entry points at a file that does not exist",
-      "datasets": 1,
-      "pct_datasets": 0.7,
-      "issues": 32
-    },
-    {
-      "rule_id": "malformed_tsv_row",
-      "severity": "error",
-      "description": "A TSV row has a different number of columns than its header",
+      "description": "The same participant_id appears on more than one participants.tsv row",
       "datasets": 1,
       "pct_datasets": 0.7,
       "issues": 1
     },
     {
-      "rule_id": "duplicate_participant_id",
+      "rule_id": "malformed_tsv_row",
       "severity": "error",
-      "description": "The same participant_id appears on more than one participants.tsv row",
+      "description": "A TSV row has a different number of columns than its header",
       "datasets": 1,
       "pct_datasets": 0.7,
       "issues": 1
@@ -161,6 +153,14 @@
       "datasets": 5,
       "pct_datasets": 3.4,
       "issues": 5
+    },
+    {
+      "rule_id": "duplicate_json_key",
+      "severity": "warning",
+      "description": "A JSON metadata file repeats a key; JSON leaves the result undefined, and neurolake uses the last value as most readers do",
+      "datasets": 3,
+      "pct_datasets": 2.0,
+      "issues": 677
     },
     {
       "rule_id": "bidsignore_hides_all_data",
@@ -230,12 +230,12 @@
       "datasets": 2
     },
     {
-      "rule_id": "duplicate_participant_id",
-      "severity": "error",
-      "datasets": 1
+      "rule_id": "duplicate_json_key",
+      "severity": "warning",
+      "datasets": 3
     },
     {
-      "rule_id": "fieldmap_intended_for_missing_target",
+      "rule_id": "duplicate_participant_id",
       "severity": "error",
       "datasets": 1
     },
@@ -445,15 +445,15 @@
       "datasets": 3
     },
     {
-      "version": "2.1",
-      "datasets": 1
-    },
-    {
       "version": "1.11",
       "datasets": 1
     },
     {
       "version": "1.12",
+      "datasets": 1
+    },
+    {
+      "version": "2.1",
       "datasets": 1
     }
   ],
@@ -690,13 +690,6 @@
       "issues": 45
     },
     {
-      "dataset_id": "ds006833",
-      "rules": [
-        "fieldmap_intended_for_missing_target"
-      ],
-      "issues": 32
-    },
-    {
       "dataset_id": "ds005065",
       "rules": [
         "missing_required_sidecar_field"
@@ -855,7 +848,7 @@
       "max": 608
     }
   ],
-  "rule_count": 21,
+  "rule_count": 22,
   "mirror_estimate": {
     "probed": 650,
     "found": 150,

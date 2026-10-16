@@ -91,7 +91,7 @@ SQL = {
         select coalesce(regexp_extract(bids_version, '^([0-9]+[.][0-9]+)', 1), 'missing or unparseable')
                    as version,
                count(*) as datasets
-        from marts.dim_dataset group by 1 order by 2 desc
+        from marts.dim_dataset group by 1 order by 2 desc, 1
     """,
     "acquisition_heterogeneity": """
         select rule_id, dataset_id, object_id, detail

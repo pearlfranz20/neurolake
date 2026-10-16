@@ -241,6 +241,7 @@ NL_SEVERITIES = ("error", "warning")
 # neurolake applies only these rules to derivative datasets (fct_dq_issue.sql, `scoped`)
 DERIVATIVE_RULES = (
     "invalid_json",
+    "duplicate_json_key",
     "malformed_tsv_row",
     "metadata_read_error",
     "metadata_not_fetched",

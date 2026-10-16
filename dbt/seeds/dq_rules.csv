@@ -12,6 +12,7 @@ missing_recommended_sidecar_field,warning,A field the BIDS schema marks RECOMMEN
 fieldmap_intended_for_missing_target,error,A fieldmap IntendedFor entry points at a file that does not exist
 ambiguous_sidecar_inheritance,warning,More than one sidecar applies to a data file at the same folder level (BIDS 1.7.0 and later forbid this)
 invalid_json,error,A JSON metadata file cannot be parsed
+duplicate_json_key,warning,"A JSON metadata file repeats a key; JSON leaves the result undefined, and neurolake uses the last value as most readers do"
 metadata_read_error,error,A metadata file is listed but its content could not be read (bad encoding or missing content)
 metadata_not_fetched,info,A metadata file is stored in git-annex and its content was not fetched during ingest
 malformed_tsv_row,error,A TSV row has a different number of columns than its header

@@ -16,12 +16,12 @@
     {
       "side": "first",
       "status": "errors",
-      "datasets": 7
+      "datasets": 6
     },
     {
       "side": "first",
       "status": "warnings only",
-      "datasets": 34
+      "datasets": 35
     },
     {
       "side": "latest",
@@ -31,21 +31,21 @@
     {
       "side": "latest",
       "status": "errors",
-      "datasets": 7
+      "datasets": 6
     },
     {
       "side": "latest",
       "status": "warnings only",
-      "datasets": 30
+      "datasets": 31
     }
   ],
   "transitions": {
     "errors_fixed": 1,
     "errors_introduced": 1,
-    "errors_persist": 6,
-    "fewer_issues": 8,
+    "errors_persist": 5,
+    "fewer_issues": 9,
     "more_issues": 5,
-    "same_issues": 75
+    "same_issues": 74
   },
   "changed": [
     {
@@ -115,6 +115,23 @@
       "participants_lost_data": 0,
       "resolved_rules": [
         "inconsistent_sampling_frequency"
+      ],
+      "introduced_rules": null
+    },
+    {
+      "dataset_id": "ds006833",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.3",
+      "first_scans": 270,
+      "latest_scans": 270,
+      "data_grew": false,
+      "data_shrank": false,
+      "resolved": 3,
+      "introduced": 0,
+      "resolved_objects": 3,
+      "participants_lost_data": 0,
+      "resolved_rules": [
+        "duplicate_json_key"
       ],
       "introduced_rules": null
     },
@@ -315,13 +332,13 @@
     }
   ],
   "changed_summary": {
-    "datasets": 15,
+    "datasets": 16,
     "data_grew": 4,
-    "only_resolved": 8,
+    "only_resolved": 9,
     "only_introduced": 3,
     "both": 4,
     "grew_and_cleared_participant_without_data": 2,
-    "resolved": 1341,
+    "resolved": 1344,
     "introduced": 46,
     "same_count_but_changed": 2
   },
@@ -343,13 +360,13 @@
     },
     {
       "fate": "persisting",
-      "issues": 636,
+      "issues": 628,
       "datasets": 34
     },
     {
       "fate": "resolved",
-      "issues": 1341,
-      "datasets": 12
+      "issues": 1344,
+      "datasets": 13
     }
   ],
   "rules": [
@@ -424,14 +441,14 @@
       "appeared": 0
     },
     {
-      "rule_id": "duplicate_participant_id",
+      "rule_id": "duplicate_json_key",
       "datasets_first": 1,
       "datasets_latest": 1,
       "cleared": 0,
       "appeared": 0
     },
     {
-      "rule_id": "fieldmap_intended_for_missing_target",
+      "rule_id": "duplicate_participant_id",
       "datasets_first": 1,
       "datasets_latest": 1,
       "cleared": 0,
@@ -460,9 +477,9 @@
     }
   ],
   "sign_test": {
-    "fewer": 8,
+    "fewer": 9,
     "more": 5,
-    "p_two_sided": 0.5811
+    "p_two_sided": 0.424
   },
   "datasets": [
     {
@@ -1189,10 +1206,10 @@
       "dataset_id": "ds006833",
       "first_snapshot": "1.0.0",
       "latest_snapshot": "1.0.3",
-      "first_errors": 32,
-      "latest_errors": 32,
-      "first_warnings": 2,
-      "latest_warnings": 2
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 29,
+      "latest_warnings": 26
     },
     {
       "dataset_id": "ds006893",

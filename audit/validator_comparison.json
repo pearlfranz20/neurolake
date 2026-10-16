@@ -118,12 +118,12 @@
         "fieldmap_intended_for_missing_target"
       ],
       "both": 0,
-      "only_neurolake": 1,
+      "only_neurolake": 0,
       "only_validator": 0,
-      "neither": 143,
+      "neither": 144,
       "assessed": 144,
-      "agree": 143,
-      "flagged_by_either": 1,
+      "agree": 144,
+      "flagged_by_either": 0,
       "not_assessed_neurolake_flagged": 0
     },
     {
@@ -302,9 +302,9 @@
         "subject_missing_from_participants"
       ],
       "neurolake_examples": [
-        "subject_missing_from_participants: sub-006",
-        "subject_missing_from_participants: sub-011",
-        "subject_missing_from_participants: sub-013"
+        "subject_missing_from_participants: sub-003",
+        "subject_missing_from_participants: sub-004",
+        "subject_missing_from_participants: sub-005"
       ],
       "validator_files": 0,
       "validator_examples": []
@@ -321,9 +321,9 @@
         "subject_missing_from_participants"
       ],
       "neurolake_examples": [
-        "subject_missing_from_participants: sub-301",
-        "subject_missing_from_participants: sub-302",
-        "subject_missing_from_participants: sub-303"
+        "subject_missing_from_participants: sub-306",
+        "subject_missing_from_participants: sub-307",
+        "subject_missing_from_participants: sub-308"
       ],
       "validator_files": 0,
       "validator_examples": []
@@ -475,25 +475,6 @@
     },
     {
       "dataset_id": "ds006833",
-      "check": "intended_for",
-      "direction": "only_neurolake",
-      "category": "neurolake_artefact",
-      "reason": "5 fieldmap sidecars set IntendedFor twice: neurolake keeps the first value (targets missing), the validator and most JSON parsers the last (targets exist). JSON leaves duplicate keys undefined, so the real finding is the duplicate key",
-      "neurolake_findings": 32,
-      "neurolake_objects": 5,
-      "neurolake_rules": [
-        "fieldmap_intended_for_missing_target"
-      ],
-      "neurolake_examples": [
-        "fieldmap_intended_for_missing_target: sub-01/ses-02/fmap/sub-01_ses-02_fieldmap.json",
-        "fieldmap_intended_for_missing_target: sub-02/ses-02/fmap/sub-02_ses-02_fieldmap.json",
-        "fieldmap_intended_for_missing_target: sub-07/ses-02/fmap/sub-07_ses-02_fieldmap.json"
-      ],
-      "validator_files": 0,
-      "validator_examples": []
-    },
-    {
-      "dataset_id": "ds006833",
       "check": "description_missing",
       "direction": "only_validator",
       "category": "bidsignore_semantics",
@@ -591,7 +572,7 @@
       "validator_not_run": 0,
       "real_neurolake_miss": 0,
       "real_validator_miss": 15,
-      "neurolake_artefact": 1,
+      "neurolake_artefact": 0,
       "other": 0
     },
     "validator_not_assessed": {
@@ -638,6 +619,11 @@
       "rule_id": "inconsistent_repetition_time",
       "datasets": 5,
       "findings": 9
+    },
+    {
+      "rule_id": "duplicate_json_key",
+      "datasets": 3,
+      "findings": 677
     },
     {
       "rule_id": "ambiguous_sidecar_inheritance",
@@ -780,12 +766,6 @@
       "check": "required_sidecar_field",
       "direction": "only_neurolake",
       "note": "All nine subjects have a task-wake_eeg.set with no eeg.json at any level (only task-sleep has one), so the five REQUIRED EEG fields are undefined: 45 findings, 9 recordings x 5 fields"
-    },
-    {
-      "dataset_id": "ds006833",
-      "check": "intended_for",
-      "direction": "only_neurolake",
-      "note": "sub-01_ses-02_fieldmap.json contains the key IntendedFor twice: first six ses-01/func targets that do not exist, then six ses-02/func targets that do"
     },
     {
       "dataset_id": "ds002841",
