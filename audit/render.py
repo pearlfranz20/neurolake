@@ -30,6 +30,7 @@ LABELS = {
     "scans_tsv_missing_file": "scans.tsv lists a missing file",
     "malformed_tsv_row": "Malformed TSV row",
     "invalid_json": "Invalid JSON",
+    "duplicate_json_key": "Key repeated in a JSON file",
     "metadata_read_error": "Unreadable metadata file",
     "metadata_not_fetched": "Metadata not fetched (annexed)",
     "implausible_repetition_time": "Implausible BOLD TR",
@@ -519,7 +520,14 @@ def validator_section(vx: dict) -> list[str]:
             f"{_plural(n, 'dataset')} on {e(CHECK_LABELS.get(c, c).lower())}{covering(c, k)}."
             for c, (n, k) in sorted(per_check.items(), key=lambda x: -x[1][0])
         )
-        reasons_v = sorted({d["reason"] for d in miss_v})
+        # the participants reason gets its own paragraph below, so it is not repeated here
+        reasons_v = sorted(
+            {
+                d["reason"]
+                for d in miss_v
+                if not (d["check"] == "participants_vs_data" and "PARTICIPANT_ID_MISMATCH" in dead)
+            }
+        )
         parts.append(
             f"<p>{_plural(len(miss_v), 'disagreement')} in {_plural(len({d['dataset_id'] for d in miss_v}), 'dataset')} "
             f"are problems neurolake reports and validator {e(v['version'])} does not. {detail} "

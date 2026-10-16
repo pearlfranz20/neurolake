@@ -5,6 +5,9 @@ neurolake:
       type: duckdb
       path: "{{ env_var('NEUROLAKE_LAKE', '../data/lake') }}/neurolake.duckdb"
       threads: 4
+      # JSON helpers DuckDB lacks (repeated keys): see src/neurolake/dbt_plugin.py
+      plugins:
+        - module: neurolake.dbt_plugin
       settings:
         # large datasets: let DuckDB reorder rows and spill instead of failing
         preserve_insertion_order: false

@@ -58,7 +58,7 @@ SQL = {
         cross join raw
         where i.rule_id not in ('derivative_dataset')
         group by i.rule_id, i.severity, r.description
-        order by case i.severity when 'error' then 0 when 'warning' then 1 else 2 end, datasets desc
+        order by case i.severity when 'error' then 0 when 'warning' then 1 else 2 end, datasets desc, rule_id
     """,
     # Severity by rule: a rule can be error for some fields and warning for others.
     "rule_severity": """
@@ -91,7 +91,7 @@ SQL = {
         select coalesce(regexp_extract(bids_version, '^([0-9]+[.][0-9]+)', 1), 'missing or unparseable')
                    as version,
                count(*) as datasets
-        from marts.dim_dataset group by 1 order by 2 desc
+        from marts.dim_dataset group by 1 order by 2 desc, 1
     """,
     "acquisition_heterogeneity": """
         select rule_id, dataset_id, object_id, detail

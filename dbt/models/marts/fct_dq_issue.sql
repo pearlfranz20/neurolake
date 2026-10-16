@@ -143,6 +143,14 @@ invalid_json as (
     where not is_valid_json
 ),
 
+duplicate_json_key as (
+    select dataset_id, 'duplicate_json_key', 'warning', 'file', path,
+        'key repeated: ' || array_to_string(list_transform(duplicate_keys, k -> regexp_replace(k, '^\$\.?', '')), ', ')
+        || ' (the last value is used, as most JSON readers do)'
+    from {{ ref('stg_json_docs') }}
+    where is_valid_json and len(duplicate_keys) > 0
+),
+
 metadata_read_error as (
     select dataset_id, 'metadata_read_error', 'error', 'file', path, error
     from {{ ref('stg_read_errors') }}
@@ -235,6 +243,7 @@ unioned as (
     union all select * from fieldmap_intended_for_missing_target
     union all select * from ambiguous_sidecar_inheritance
     union all select * from invalid_json
+    union all select * from duplicate_json_key
     union all select * from metadata_read_error
     union all select * from metadata_not_fetched
     union all select * from malformed_tsv_row
@@ -261,7 +270,7 @@ scoped as (
     inner join {{ ref('dim_dataset') }} as d using (dataset_id)
     where d.dataset_type <> 'derivative'
        or u.rule_id in (
-           'invalid_json', 'malformed_tsv_row', 'metadata_read_error', 'metadata_not_fetched',
+           'invalid_json', 'duplicate_json_key', 'malformed_tsv_row', 'metadata_read_error', 'metadata_not_fetched',
            'dataset_description_missing', 'dataset_description_missing_field'
        )
     union all

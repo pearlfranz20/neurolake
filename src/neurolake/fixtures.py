@@ -18,6 +18,7 @@ EXPECTED_ISSUES = {
     ("ds900001", "participant_without_data", "sub-07"),
     ("ds900001", "inconsistent_repetition_time", "task-nback"),
     ("ds900001", "fieldmap_intended_for_missing_target", "sub-02"),
+    ("ds900001", "duplicate_json_key", "sub-03/fmap/sub-03_phasediff.json"),
     ("ds900002", "missing_required_sidecar_field", "sub-04"),
     ("ds900002", "inconsistent_sampling_frequency", "task-oddball"),
     ("ds900003", "invalid_json", "sub-01/anat/sub-01_T1w.json"),
@@ -36,6 +37,8 @@ EXPECTED_ISSUES = {
 
 # Real-world patterns that must NOT be reported (each was a false positive once).
 MUST_NOT_FLAG = {
+    # a repeated key resolves to its last value, whose IntendedFor target exists
+    ("ds900001", "fieldmap_intended_for_missing_target", "sub-03"),
     # BIDS accepts VolumeTiming instead of RepetitionTime
     ("ds900001", "missing_required_sidecar_field", "task-sparse"),
     # sidecar exists but was not fetched, so the fields are unknown, not missing
@@ -140,6 +143,17 @@ def _fmri(root: Path) -> None:
                 root / sub / "fmap" / f"{sub}_phasediff.json",
                 {"EchoTime1": 0.00492, "EchoTime2": 0.00738, "IntendedFor": [f"bids::{sub}/{target}"]},
             )
+
+    # sub-03's fieldmap repeats IntendedFor. The first value points at a run that does
+    # not exist, the last at one that does; readers that keep the last value (most of
+    # them, and neurolake) must see a valid target.
+    _blob(root / "sub-03" / "fmap" / "sub-03_phasediff.nii.gz", 1024)
+    _write(
+        root / "sub-03" / "fmap" / "sub-03_phasediff.json",
+        '{"EchoTime1": 0.00492, "EchoTime2": 0.00738, '
+        '"IntendedFor": ["bids::sub-03/func/sub-03_task-rest_run-7_bold.nii.gz"], '
+        '"IntendedFor": ["bids::sub-03/func/sub-03_task-rest_bold.nii.gz"]}',
+    )
 
     # sub-03 run-2 overrides the inherited TR (a classic acquisition mismatch).
     _json(

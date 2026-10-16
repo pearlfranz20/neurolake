@@ -12,8 +12,8 @@ Only metadata moves through the pipeline: file listings, `participants.tsv`, `*_
 - Participant bookkeeping is the weak spot: 19% have no `participants.tsv`, and some tables disagree with the data folders on ID format (`sub-1` against `sub-001`, or no `sub-` prefix at all).
 - 11 datasets mix TRs or sampling rates within one task, which matters for any pipeline that assumes one value per task.
 - A `.bidsignore` can hide more than intended. One dataset's `*` ignores every file, and another's `**/*dat*` matches `dataset_description.json`.
-- Updates rarely fix metadata. Of the 88 datasets with more than one snapshot, 75 have exactly as many findings in their latest snapshot as in their first. Fully clean moves from 47 to 51, errors stay at 7, and some updates introduce problems: the `*` above arrived in a later snapshot.
-- Against the official bids-validator (legacy 1.15.0, in git-tree mode with NIfTI header checks off), the two tools agree on 8 of the 26 dataset-check pairs either one flags, over the 144 datasets the validator could assess, and on 7 of 14 leaving out the participants check that 1.15.0 never runs. 15 of the 18 disagreements are real problems 1.15.0 does not report: its participants-vs-folders check can never fire (fullTest passes a constant null for the participants list, shown on a synthetic dataset), and it does not require a sidecar for EEG or MEG recordings. One goes the other way: a malformed `events.tsv` that neurolake does not parse.
+- Updates rarely fix metadata. Of the 88 datasets with more than one snapshot, 74 have exactly as many findings in their latest snapshot as in their first. Fully clean moves from 47 to 51, errors stay at 6, and some updates introduce problems: the `*` above arrived in a later snapshot.
+- Against the official bids-validator (legacy 1.15.0, in git-tree mode with NIfTI header checks off), the two tools agree on 8 of the 25 dataset-check pairs either one flags, over the 144 datasets the validator could assess, and on 7 of 13 leaving out the participants check that 1.15.0 never runs. 15 of the 17 disagreements are real problems 1.15.0 does not report: its participants-vs-folders check can never fire (fullTest passes a constant null for the participants list, shown on a synthetic dataset), and it does not require a sidecar for EEG or MEG recordings. One goes the other way: a malformed `events.tsv` that neurolake does not parse.
 
 [**Every dataset in the audit**](https://pearlfranz20.github.io/neurolake/datasets/) ([source](docs/datasets/index.html)) has a sortable, filterable table of the 150 datasets and one page per dataset with its findings grouped by rule. The pages are rendered from the committed `audit/datasets.json` alone, so `make datasets` works on a fresh clone. `make datasets-export` re-exports that file from the lake built by `make history`, then renders.
 
@@ -79,7 +79,7 @@ make docs                                   # dbt docs site with the lineage gra
 
 **Failures.** A metadata file whose content is unusable (bad encoding, missing) is recorded in `raw_read_errors` and reported as a quality issue. Content that sits in git-annex and was not fetched is marked unknown rather than missing, and checks that depend on it are skipped. A network failure that outlasts the retries fails the run and leaves the previous data in place.
 
-**Real-world BIDS.** `.bidsignore` is applied with gitignore semantics, but never to core files such as `dataset_description.json`. CTF (`.ds`) and MEF3 (`.mefd`) recordings are folders and count as one data file. MEGIN calibration files are not recordings. `stimuli/` is not validated. Derivative datasets only get file-integrity checks.
+**Real-world BIDS.** `.bidsignore` is applied with gitignore semantics, but never to core files such as `dataset_description.json`. CTF (`.ds`) and MEF3 (`.mefd`) recordings are folders and count as one data file. MEGIN calibration files are not recordings. `stimuli/` is not validated. Derivative datasets only get file-integrity checks. A key repeated within one JSON file resolves to its last value, as Python, JavaScript and the BIDS validator read it (DuckDB's own JSON functions would return the first), and the repetition is reported. A small dbt-duckdb plugin (`src/neurolake/dbt_plugin.py`) registers the two Python functions that do this, so the dbt project needs the `neurolake` package installed.
 
 | Model | Grain |
 | --- | --- |
@@ -98,7 +98,7 @@ Rules live in `fct_dq_issue`, one CTE each, and are catalogued in `seeds/dq_rule
 - **Sidecars:** REQUIRED fields missing (error) and RECOMMENDED ones (warning), with alternatives such as `RepetitionTime` or `VolumeTiming`, more than one sidecar applying at one folder level
 - **Acquisition:** TRs or sampling rates more than 0.5% apart within one task and acquisition, BOLD TRs that look like milliseconds
 - **References:** fieldmap `IntendedFor` and `scans.tsv` entries pointing at files that do not exist
-- **Files:** invalid JSON, malformed TSV rows, unreadable files, subject folders not at the root, a missing or incomplete `dataset_description.json`, `.bidsignore` patterns that match core files or every data file
+- **Files:** invalid JSON, a key repeated within one JSON file, malformed TSV rows, unreadable files, subject folders not at the root, a missing or incomplete `dataset_description.json`, `.bidsignore` patterns that match core files or every data file
 
 ## Testing
 
