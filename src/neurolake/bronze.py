@@ -17,6 +17,9 @@ then moved into place with raw_ingest_runs last. Staging models only read rows w
 run_id matches the dataset's current run, so a crash mid-publish can leave a dataset
 empty until the next ingest, but never mixes two runs. A per-dataset lock file stops
 two ingests of the same dataset from interleaving.
+
+Incremental runs: `ingest_unless_current` skips a snapshot that is already the
+dataset's current run and fully published (see `is_current_and_complete`).
 """
 
 from __future__ import annotations
@@ -29,9 +32,9 @@ import logging
 import re
 import shutil
 import uuid
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager, nullcontext
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -89,6 +92,7 @@ class IngestResult:
     n_files: int
     n_metadata_files: int
     n_read_errors: int
+    skipped: bool = False
 
 
 def parse_tsv(text: str) -> list[tuple[dict, bool]]:
@@ -150,10 +154,15 @@ def _bidsignore(source: DatasetSource) -> pathspec.GitIgnoreSpec | None:
     return pathspec.GitIgnoreSpec.from_lines(lines) if lines else None
 
 
-def ingest(source: DatasetSource, lake: str | Path, max_workers: int = 8) -> IngestResult:
+def ingest(
+    source: DatasetSource, lake: str | Path, max_workers: int = 8, *, lock_held: bool = False
+) -> IngestResult:
     """Land one snapshot. Content-level read problems (bad encoding, missing file) are
     recorded and surfaced as data-quality issues; anything else (network failures
-    after retries, API errors) propagates so the run fails and can be retried."""
+    after retries, API errors) propagates so the run fails and can be retried.
+
+    `lock_held` is for callers that already hold the dataset's lock (flock is not
+    re-entrant, so taking it twice in one process would deadlock)."""
     lake = Path(lake)
     run_id = uuid.uuid4().hex
     started = datetime.now(timezone.utc)
@@ -234,7 +243,7 @@ def ingest(source: DatasetSource, lake: str | Path, max_workers: int = 8) -> Ing
             dest = staging / table
             dest.mkdir(parents=True)
             pq.write_table(pa.Table.from_pylist(out[table], schema=_SCHEMAS[table]), dest / "data.parquet")
-        with _dataset_lock(lake, source.dataset_id):
+        with nullcontext() if lock_held else _dataset_lock(lake, source.dataset_id):
             for table in TABLES:  # raw_ingest_runs last
                 part = (
                     lake
@@ -250,3 +259,84 @@ def ingest(source: DatasetSource, lake: str | Path, max_workers: int = 8) -> Ing
     return IngestResult(
         source.dataset_id, source.snapshot, run_id, len(files), len(meta_paths), len(error_rows)
     )
+
+
+def _partition(lake: Path, table: str, dataset_id: str, snapshot: str) -> Path:
+    return lake / "bronze" / table / f"dataset_id={dataset_id}" / f"snapshot={snapshot}" / "data.parquet"
+
+
+def current_run(lake: str | Path, dataset_id: str) -> dict | None:
+    """The dataset's current run, defined as in stg_ingest_runs.is_current: the
+    raw_ingest_runs row with the latest finished_at across all of its snapshots.
+    Reads the Parquet directly, so it needs neither dbt nor the DuckDB file."""
+    best = None
+    root = Path(lake) / "bronze" / "raw_ingest_runs" / f"dataset_id={dataset_id}"
+    for f in sorted(root.glob("snapshot=*/data.parquet")):
+        for row in pq.read_table(f).to_pylist():
+            if best is None or row["finished_at"] > best["finished_at"]:
+                best = {**row, "snapshot": f.parent.name.removeprefix("snapshot=")}
+    return best
+
+
+def is_current_and_complete(lake: str | Path, dataset_id: str, snapshot: str) -> bool:
+    """True when `snapshot` is the dataset's current run and that run is fully published.
+
+    Fully published means every bronze table has a partition for (dataset, snapshot)
+    and no row in any of them carries another run_id. Tables can legitimately be empty
+    (most clean datasets have no read errors), and an empty partition has no run_id to
+    compare. That is safe because _publish swaps raw_files first and raw_ingest_runs
+    last: if a later run crashed mid-publish, raw_ingest_runs still names the older run
+    while raw_files already holds the newer one, so raw_files exposes it. raw_files and
+    raw_read_errors must also hold exactly the row counts the run recorded, which
+    catches the corner where the newer run left one of them empty."""
+    lake = Path(lake)
+    run = current_run(lake, dataset_id)
+    if run is None or run["snapshot"] != snapshot:
+        return False
+    expected_rows = {"raw_files": run["n_files"], "raw_read_errors": run["n_read_errors"]}
+    for table in TABLES:
+        f = _partition(lake, table, dataset_id, snapshot)
+        if not f.exists():
+            return False
+        ids = pq.read_table(f, columns=["run_id"]).column("run_id")
+        if set(ids.to_pylist()) - {run["run_id"]}:
+            return False
+        if table in expected_rows and len(ids) != expected_rows[table]:
+            return False
+    return True
+
+
+def ingest_unless_current(
+    lake: str | Path,
+    dataset_id: str,
+    snapshot: str,
+    open_source: Callable[[], AbstractContextManager[DatasetSource]],
+    force: bool = False,
+) -> IngestResult:
+    """Ingest a resolved snapshot unless it is already current and complete.
+
+    `open_source` is only called when an ingest is needed, so a skipped dataset is
+    never cloned. The dataset lock is held across the check, the fetch and the
+    publish: a second worker on the same dataset waits, then sees the finished run
+    and skips instead of fetching it again. A skip trusts the snapshot tag (not the
+    commit it points to) and keeps bronze written by older ingest code; use force
+    after either changes."""
+    lake = Path(lake)
+    with _dataset_lock(lake, dataset_id):
+        if not force and is_current_and_complete(lake, dataset_id, snapshot):
+            run = current_run(lake, dataset_id)
+            return IngestResult(
+                dataset_id,
+                snapshot,
+                run["run_id"],
+                run["n_files"],
+                run["n_metadata_files"],
+                run["n_read_errors"],
+                skipped=True,
+            )
+        with open_source() as source:
+            if (source.dataset_id, source.snapshot) != (dataset_id, snapshot):
+                raise ValueError(
+                    f"source is {source.dataset_id}:{source.snapshot}, expected {dataset_id}:{snapshot}"
+                )
+            return ingest(source, lake, lock_held=True)
