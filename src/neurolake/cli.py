@@ -93,7 +93,7 @@ def ingest_mirror(
                 continue
             if r.skipped:
                 n_skipped += 1
-                typer.echo(f"{r.dataset_id}:{r.snapshot}  skipped (unchanged at {r.snapshot})")
+                typer.echo(f"{r.dataset_id}:{r.snapshot}  skipped (unchanged)")
             else:
                 n_ingested += 1
                 typer.echo(

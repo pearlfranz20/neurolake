@@ -154,16 +154,20 @@ def _bidsignore(source: DatasetSource) -> pathspec.GitIgnoreSpec | None:
     return pathspec.GitIgnoreSpec.from_lines(lines) if lines else None
 
 
-def ingest(
-    source: DatasetSource, lake: str | Path, max_workers: int = 8, *, lock_held: bool = False
-) -> IngestResult:
+def ingest(source: DatasetSource, lake: str | Path, max_workers: int = 8) -> IngestResult:
     """Land one snapshot. Content-level read problems (bad encoding, missing file) are
     recorded and surfaced as data-quality issues; anything else (network failures
-    after retries, API errors) propagates so the run fails and can be retried.
-
-    `lock_held` is for callers that already hold the dataset's lock (flock is not
-    re-entrant, so taking it twice in one process would deadlock)."""
+    after retries, API errors) propagates so the run fails and can be retried."""
     lake = Path(lake)
+    return _ingest(source, lake, max_workers, publish_lock=_dataset_lock(lake, source.dataset_id))
+
+
+def _ingest(
+    source: DatasetSource, lake: Path, max_workers: int, publish_lock: AbstractContextManager
+) -> IngestResult:
+    """ingest() with the lock to hold while publishing passed in. ingest_unless_current
+    already holds the dataset lock and passes nullcontext(): flock is not re-entrant,
+    so taking it twice in one process would deadlock."""
     run_id = uuid.uuid4().hex
     started = datetime.now(timezone.utc)
     log.info("ingest %s:%s from %s", source.dataset_id, source.snapshot, source.source_name)
@@ -243,7 +247,7 @@ def ingest(
             dest = staging / table
             dest.mkdir(parents=True)
             pq.write_table(pa.Table.from_pylist(out[table], schema=_SCHEMAS[table]), dest / "data.parquet")
-        with nullcontext() if lock_held else _dataset_lock(lake, source.dataset_id):
+        with publish_lock:
             for table in TABLES:  # raw_ingest_runs last
                 part = (
                     lake
@@ -267,15 +271,56 @@ def _partition(lake: Path, table: str, dataset_id: str, snapshot: str) -> Path:
 
 def current_run(lake: str | Path, dataset_id: str) -> dict | None:
     """The dataset's current run, defined as in stg_ingest_runs.is_current: the
-    raw_ingest_runs row with the latest finished_at across all of its snapshots.
-    Reads the Parquet directly, so it needs neither dbt nor the DuckDB file."""
+    raw_ingest_runs row with the latest finished_at across all of its snapshots, ties
+    broken by the larger run_id. Rows without finished_at are ignored. Reads the
+    Parquet directly, so it needs neither dbt nor the DuckDB file. Raises on an
+    unreadable partition."""
     best = None
     root = Path(lake) / "bronze" / "raw_ingest_runs" / f"dataset_id={dataset_id}"
     for f in sorted(root.glob("snapshot=*/data.parquet")):
         for row in pq.read_table(f).to_pylist():
-            if best is None or row["finished_at"] > best["finished_at"]:
+            if row.get("finished_at") is None or row.get("run_id") is None:
+                continue
+            if best is None or (row["finished_at"], row["run_id"]) > (best["finished_at"], best["run_id"]):
                 best = {**row, "snapshot": f.parent.name.removeprefix("snapshot=")}
     return best
+
+
+_RUN_FIELDS = ("n_files", "n_metadata_files", "n_read_errors")
+
+
+def _complete_run(lake: Path, dataset_id: str, snapshot: str) -> dict | None:
+    """The current run if it is for `snapshot` and fully published, else None. Any
+    problem reading the lake (a corrupt partition, a missing column, odd values) means
+    "not complete", so the dataset is re-ingested instead of failing on every run."""
+    try:
+        run = current_run(lake, dataset_id)
+        if run is None or run["snapshot"] != snapshot:
+            return None
+        if any(run.get(k) is None for k in _RUN_FIELDS):
+            return None
+        expected_rows = {"raw_files": run["n_files"], "raw_read_errors": run["n_read_errors"]}
+        for table in TABLES:
+            f = _partition(lake, table, dataset_id, snapshot)
+            if not f.exists():
+                return None
+            if "run_id" not in pq.read_schema(f).names:
+                return None
+            ids = pq.read_table(f, columns=["run_id"]).column("run_id")
+            if set(ids.to_pylist()) - {run["run_id"]}:
+                return None
+            if table in expected_rows and len(ids) != expected_rows[table]:
+                return None
+        return run
+    except (pa.ArrowException, OSError, KeyError, TypeError, ValueError) as exc:
+        log.warning(
+            "%s:%s: cannot verify bronze (%s: %s); re-ingesting",
+            dataset_id,
+            snapshot,
+            type(exc).__name__,
+            exc,
+        )
+        return None
 
 
 def is_current_and_complete(lake: str | Path, dataset_id: str, snapshot: str) -> bool:
@@ -288,22 +333,9 @@ def is_current_and_complete(lake: str | Path, dataset_id: str, snapshot: str) ->
     last: if a later run crashed mid-publish, raw_ingest_runs still names the older run
     while raw_files already holds the newer one, so raw_files exposes it. raw_files and
     raw_read_errors must also hold exactly the row counts the run recorded, which
-    catches the corner where the newer run left one of them empty."""
-    lake = Path(lake)
-    run = current_run(lake, dataset_id)
-    if run is None or run["snapshot"] != snapshot:
-        return False
-    expected_rows = {"raw_files": run["n_files"], "raw_read_errors": run["n_read_errors"]}
-    for table in TABLES:
-        f = _partition(lake, table, dataset_id, snapshot)
-        if not f.exists():
-            return False
-        ids = pq.read_table(f, columns=["run_id"]).column("run_id")
-        if set(ids.to_pylist()) - {run["run_id"]}:
-            return False
-        if table in expected_rows and len(ids) != expected_rows[table]:
-            return False
-    return True
+    catches the corner where the newer run left one of them empty. A lake that cannot
+    be read counts as not complete."""
+    return _complete_run(Path(lake), dataset_id, snapshot) is not None
 
 
 def ingest_unless_current(
@@ -323,8 +355,8 @@ def ingest_unless_current(
     after either changes."""
     lake = Path(lake)
     with _dataset_lock(lake, dataset_id):
-        if not force and is_current_and_complete(lake, dataset_id, snapshot):
-            run = current_run(lake, dataset_id)
+        run = None if force else _complete_run(lake, dataset_id, snapshot)
+        if run is not None:
             return IngestResult(
                 dataset_id,
                 snapshot,
@@ -339,4 +371,4 @@ def ingest_unless_current(
                 raise ValueError(
                     f"source is {source.dataset_id}:{source.snapshot}, expected {dataset_id}:{snapshot}"
                 )
-            return ingest(source, lake, lock_held=True)
+            return _ingest(source, lake, 8, publish_lock=nullcontext())

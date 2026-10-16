@@ -2,7 +2,12 @@
 fully published run. Offline: the mirror is faked with a local fixture."""
 
 import shutil
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 
+import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 from typer.testing import CliRunner
@@ -72,7 +77,7 @@ def test_unchanged_second_ingest_is_skipped_and_writes_nothing(tmp_path, mirror)
 
     second = run(lake)
     assert second.exit_code == 0, second.output
-    assert f"{DS}:1.0.0  skipped (unchanged at 1.0.0)" in second.output
+    assert f"{DS}:1.0.0  skipped (unchanged)" in second.output
     assert "0 ingested, 1 skipped, 0 failed" in second.output
     assert mirror["clones"] == [(DS, "1.0.0")]  # never cloned the second time
     assert bronze_files(lake) == before
@@ -179,3 +184,85 @@ def test_failure_is_reported_and_others_continue(tmp_path, mirror, monkeypatch):
     assert out.exit_code == 1
     assert "ds999999  FAILED" in out.output
     assert "0 ingested, 1 skipped, 1 failed" in out.output
+
+
+def test_corrupt_partition_is_reingested_not_failed(tmp_path, mirror):
+    lake = tmp_path / "lake"
+    run(lake)
+    bronze._partition(lake, "raw_json_docs", DS, "1.0.0").write_bytes(b"garbage")
+    assert not bronze.is_current_and_complete(lake, DS, "1.0.0")
+    out = run(lake)
+    assert out.exit_code == 0, out.output
+    assert "1 ingested, 0 skipped, 0 failed" in out.output
+    assert bronze.is_current_and_complete(lake, DS, "1.0.0")
+
+
+def test_marker_missing_a_column_is_reingested_not_failed(tmp_path, mirror):
+    """dbt reads raw_ingest_runs with union_by_name, so an older marker without a
+    column is valid bronze; the check must treat it as incomplete, not crash."""
+    lake = tmp_path / "lake"
+    run(lake)
+    marker = bronze._partition(lake, "raw_ingest_runs", DS, "1.0.0")
+    pq.write_table(pq.read_table(marker).drop_columns(["n_read_errors", "n_metadata_files"]), marker)
+    assert not bronze.is_current_and_complete(lake, DS, "1.0.0")
+    out = run(lake)
+    assert out.exit_code == 0, out.output
+    assert "1 ingested, 0 skipped, 0 failed" in out.output
+
+
+def test_null_finished_at_in_another_snapshot_is_ignored(tmp_path, mirror):
+    """A run row without finished_at never becomes current (dbt sorts it last), and
+    it must not crash the check for the dataset's other snapshots."""
+    lake = tmp_path / "lake"
+    run(lake)
+    marker = bronze._partition(lake, "raw_ingest_runs", DS, "1.0.0")
+    table = pq.read_table(marker)
+    i = table.schema.get_field_index("finished_at")
+    stale = table.set_column(i, "finished_at", pa.nulls(1, table.schema.field(i).type))
+    stale = stale.set_column(0, "run_id", pa.array(["f" * 32]))  # sorts above any uuid hex
+    other = bronze._partition(lake, "raw_ingest_runs", DS, "0.9.0")
+    other.parent.mkdir(parents=True)
+    pq.write_table(stale, other)
+
+    assert bronze.current_run(lake, DS)["snapshot"] == "1.0.0"
+    out = run(lake)
+    assert out.exit_code == 0, out.output
+    assert "0 ingested, 1 skipped, 0 failed" in out.output
+
+
+def test_finished_at_tie_breaks_on_run_id_like_dbt(tmp_path, mirror):
+    lake = tmp_path / "lake"
+    mirror["tags"] = ["1.0.0", "1.0.1"]
+    run(lake)  # 1.0.1
+    run(lake, "--snapshot", "first")  # 1.0.0, now current
+    a = bronze._partition(lake, "raw_ingest_runs", DS, "1.0.0")
+    b = bronze._partition(lake, "raw_ingest_runs", DS, "1.0.1")
+    ta, tb = pq.read_table(a), pq.read_table(b)
+    i = ta.schema.get_field_index("finished_at")
+    pq.write_table(tb.set_column(i, "finished_at", ta.column(i)), b)  # same finished_at
+    winner = max([(ta, "1.0.0"), (tb, "1.0.1")], key=lambda t: t[0].column("run_id")[0].as_py())[1]
+    assert bronze.current_run(lake, DS)["snapshot"] == winner
+
+
+def test_check_and_ingest_run_under_the_lock(tmp_path):
+    """Four workers on one dataset at once: exactly one fetches it, the others wait
+    for the lock, then see the finished run and skip."""
+    (root,) = [r for r in fixtures.generate(tmp_path / "bids") if r.name == DS]
+    lake = tmp_path / "lake"
+    clones = []
+    guard = threading.Lock()
+
+    @contextmanager
+    def slow_clone():
+        with guard:
+            clones.append(1)
+        time.sleep(0.5)
+        yield LocalBidsSource(root, dataset_id=DS, snapshot="1.0.0")
+
+    with ThreadPoolExecutor(4) as pool:
+        results = list(
+            pool.map(lambda _: bronze.ingest_unless_current(lake, DS, "1.0.0", slow_clone), range(4))
+        )
+    assert len(clones) == 1
+    assert sorted(r.skipped for r in results) == [False, True, True, True]
+    assert len({r.run_id for r in results}) == 1
