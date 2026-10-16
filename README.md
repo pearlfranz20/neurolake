@@ -2,6 +2,8 @@
 
 A small lakehouse for neuroimaging metadata. It pulls [BIDS](https://bids.neuroimaging.io) datasets from [OpenNeuro](https://openneuro.org) (or a local folder), lands them as raw Parquet, models them with dbt on DuckDB, and flags the metadata problems that break reuse.
 
+What changed in each release: [CHANGELOG.md](CHANGELOG.md).
+
 Only metadata moves through the pipeline: file listings, `participants.tsv`, `*_scans.tsv` and JSON sidecars. Imaging data is never downloaded. From OpenNeuro's DataLad mirrors, file sizes come from git-annex keys, so a multi-terabyte dataset ingests in seconds.
 
 ## OpenNeuro audit

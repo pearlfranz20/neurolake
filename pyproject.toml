@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "neurolake"
-version = "0.1.0"
+version = "0.2.0"
 description = "Lakehouse pipeline for BIDS neuroimaging metadata: OpenNeuro ingest, DuckDB bronze layer, dbt models and data-quality marts."
 readme = "README.md"
 requires-python = ">=3.10"
