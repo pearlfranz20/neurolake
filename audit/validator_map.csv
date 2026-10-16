@@ -1,0 +1,15 @@
+check,validator_key,neurolake_rule_id,justification
+participant_id_prefix,PARTICIPANT_ID_PATTERN,participant_id_without_prefix,Both flag participant_id values in participants.tsv that do not match sub-<label>
+participants_vs_data,PARTICIPANT_ID_MISMATCH,subject_missing_from_participants,"The validator compares the subject folders with participant_id in both directions; neurolake splits the same comparison into two rules, one per direction"
+participants_vs_data,PARTICIPANT_ID_MISMATCH,participant_without_data,"The other direction of the same comparison: a participants.tsv row whose subject has no data folder"
+tsv_row_length,TSV_EQUAL_ROWS,malformed_tsv_row,Both flag a TSV row whose number of columns differs from the header
+invalid_json,JSON_INVALID,invalid_json,Both flag a JSON file that cannot be parsed
+intended_for,INTENDED_FOR,fieldmap_intended_for_missing_target,Both flag a fieldmap IntendedFor entry that points at a file not in the dataset
+description_missing,DATASET_DESCRIPTION_JSON_MISSING,dataset_description_missing,Both flag a dataset without dataset_description.json at its root
+description_fields,JSON_SCHEMA_VALIDATION_ERROR/dataset_description_required,dataset_description_missing_field,"The validator's JSON schema for dataset_description.json requires Name and BIDSVersion, the two fields neurolake checks (only schema errors naming a missing required property in that file)"
+required_sidecar_field,JSON_SCHEMA_VALIDATION_ERROR/sidecar_required,missing_required_sidecar_field,"The validator's per-datatype JSON schemas (eeg, meg, ieeg, nirs...) list REQUIRED sidecar fields; only schema errors naming a missing required property count"
+required_sidecar_field,REPETITION_TIME_MUST_DEFINE,missing_required_sidecar_field,RepetitionTime is a REQUIRED BOLD field in neurolake's seed (with VolumeTiming as the alternative)
+required_sidecar_field,TASK_NAME_MUST_DEFINE,missing_required_sidecar_field,TaskName is a REQUIRED BOLD field in neurolake's seed
+scans_tsv_target,SCANS_FILENAME_NOT_MATCH_DATASET,scans_tsv_missing_file,Both flag a scans.tsv row naming a file that is not in the dataset
+implausible_tr,REPETITION_TIME_GREATER_THAN,implausible_repetition_time,"Both flag a RepetitionTime that looks like milliseconds; thresholds differ (validator above 100 s, neurolake 20 s or more)"
+unreadable_file,FILE_READ,metadata_read_error,Both flag a file whose content cannot be read

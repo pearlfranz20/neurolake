@@ -384,7 +384,224 @@ def history_section(hx: dict) -> list[str]:
     return out
 
 
-def build(f: dict, hx: dict | None = None) -> str:
+CHECK_LABELS = {
+    "participant_id_prefix": "participant_id lacks sub- prefix",
+    "participants_vs_data": "participants.tsv vs subject folders",
+    "tsv_row_length": "TSV row length differs from header",
+    "invalid_json": "Invalid JSON",
+    "intended_for": "IntendedFor target missing",
+    "description_missing": "No dataset_description.json",
+    "description_fields": "Description lacks Name or BIDSVersion",
+    "required_sidecar_field": "Required sidecar field missing",
+    "scans_tsv_target": "scans.tsv lists a missing file",
+    "implausible_tr": "TR that looks like milliseconds",
+    "unreadable_file": "Unreadable file",
+}
+CATEGORY_LABELS = {
+    "version_drift": "spec-version drift",
+    "bidsignore_semantics": ".bidsignore semantics",
+    "validator_not_run": "validator could not assess",
+    "real_neurolake_miss": "real neurolake miss",
+    "real_validator_miss": "real validator miss",
+    "other": "other",
+}
+
+
+def _plural(n: int, word: str, many: str | None = None) -> str:
+    return f"{n} {word if n == 1 else (many or word + 's')}"
+
+
+def validator_section(vx: dict) -> list[str]:
+    """Where neurolake and the official bids-validator agree and disagree, from
+    audit/validator_comparison.json. Every count and every claim about a dataset is read
+    from the comparison; judgement words are only used next to the numbers behind them."""
+    v = vx["validator"]
+    checks = vx["checks"]
+    dis = vx["disagreements"]
+    n_run, n_ok = v["datasets_run"], v["assessed"]
+    reasons: dict[str, int] = {}
+    for x in v["not_assessed"]:
+        reasons[x["reason"]] = reasons.get(x["reason"], 0) + 1
+    reason_text = ", ".join(f"{k} in {n}" for k, n in sorted(reasons.items(), key=lambda kv: -kv[1]))
+    real = [d for d in dis if d["direction"] != "validator_not_assessed"]
+    flagged = sum(c["flagged_by_either"] for c in checks)
+    both = sum(c["both"] for c in checks)
+    by_cat: dict[str, list[dict]] = {}
+    for d in real:
+        by_cat.setdefault(d["category"], []).append(d)
+
+    out = [
+        "<section>",
+        "<h2>Cross-check with the official validator</h2>",
+        f"<p>To see where these rules stand against the reference tool, I ran the official "
+        f"<code>bids-validator</code> on the same {n_run} snapshots. It is the legacy version "
+        f"{e(v['version'])} from npm, not the current schema-based 2.x, which is distributed through Deno "
+        "and could not be installed here. Because imaging data is never downloaded, it ran in git-tree mode "
+        "on the shallow clones (<code>--gitTreeMode</code>) with NIfTI header checks switched off "
+        "(<code>--ignoreNiftiHeaders</code>), so its header checks are excluded from everything below.</p>",
+        f"<p>The validator could assess {n_ok} of the {n_run} datasets"
+        + (f". It stopped early on the rest ({e(reason_text)})" if reason_text else "")
+        + f". Agreement is computed over those {n_ok} only: a dataset the validator could not assess "
+        "never counts as agreement.</p>",
+    ]
+    if flagged:
+        out.append(
+            f"<p>{len(checks)} neurolake rules have a validator check that tests the same thing "
+            "(<code>audit/validator_map.csv</code>). On those, the two tools flagged "
+            f"{_plural(flagged, 'dataset-check pair')} between them and agreed on {both} "
+            f"({pct(both, flagged)}). Every one of the {_plural(len(real), 'disagreement')} is "
+            "classified below from the data, not by hand.</p>"
+        )
+    rows = "".join(
+        f"<tr><td>{e(CHECK_LABELS.get(c['check'], c['check']))}<br>"
+        f'<span class="mono" style="color:var(--faint)">{e(", ".join(c["validator_keys"]))}</span></td>'
+        f'<td class="num">{c["both"]}</td><td class="num">{c["only_neurolake"]}</td>'
+        f'<td class="num">{c["only_validator"]}</td><td class="num">{c["neither"]}</td>'
+        f'<td class="num">{c["not_assessed_neurolake_flagged"]}</td></tr>'
+        for c in sorted(checks, key=lambda c: -c["flagged_by_either"])
+    )
+    out += [
+        "<figure>",
+        '<div class="chart"><div class="table-wrap" style="margin-top:0"><table><thead><tr>'
+        '<th>Check (validator code)</th><th class="num">Both</th><th class="num">Only neurolake</th>'
+        '<th class="num">Only validator</th><th class="num">Neither</th>'
+        '<th class="num">Not assessed</th></tr></thead>'
+        f"<tbody>{rows}</tbody></table></div></div>",
+        f"<figcaption>Datasets per paired check, over the {n_ok} the validator assessed. "
+        "The last column counts datasets the validator could not assess where neurolake has a finding; "
+        "they are left out of the other columns.</figcaption>",
+        "</figure>",
+    ]
+
+    # why they disagree, one sentence per category that occurs, all from the data
+    parts = []
+    miss_v = by_cat.get("real_validator_miss", [])
+    if miss_v:
+        per_check: dict[str, list[int]] = {}
+        for d in miss_v:
+            c = per_check.setdefault(d["check"], [0, 0])
+            c[0] += 1
+            c[1] += d.get("neurolake_objects", 0)
+        noun = {"participants_vs_data": "subject", "required_sidecar_field": "recording"}
+        detail = ", ".join(
+            f"{_plural(n, 'dataset')} on {e(CHECK_LABELS.get(c, c).lower())}"
+            + (f" covering {_plural(k, noun[c])}" if c in noun else "")
+            for c, (n, k) in sorted(per_check.items(), key=lambda x: -x[1][0])
+        )
+        reasons_v = sorted({d["reason"] for d in miss_v})
+        parts.append(
+            f"<p>{_plural(len(miss_v), 'disagreement')} in {_plural(len({d['dataset_id'] for d in miss_v}), 'dataset')} "
+            f"are problems neurolake reports and validator {e(v['version'])} does not ({detail}). "
+            + " ".join(f"{e(r[0].upper() + r[1:])}." for r in reasons_v)
+            + "</p>"
+        )
+        probes = vx.get("probes") or {}
+        if probes.get("expected", {}).get("PARTICIPANT_ID_MISMATCH") is False:
+            parts.append(
+                "<p>The participants check is worth a note. A synthetic dataset whose "
+                "<code>participants.tsv</code> and subject folders disagree passes validator "
+                f"{e(v['version'])} without <code>PARTICIPANT_ID_MISMATCH</code>, while the same file's "
+                "missing <code>sub-</code> prefix is reported, so the table was read. Its silence on these "
+                "datasets therefore says nothing about them.</p>"
+            )
+    miss_n = by_cat.get("real_neurolake_miss", [])
+    if miss_n:
+        listed = " ".join(f"<code>{e(d['dataset_id'])}</code>: {e(d['reason'])}." for d in miss_n)
+        verb = "is a problem" if len(miss_n) == 1 else "are problems"
+        parts.append(
+            f"<p>The other way, {_plural(len(miss_n), 'disagreement')} {verb} the validator reports and "
+            f"neurolake misses. {listed}</p>"
+        )
+    for cat in ("bidsignore_semantics", "version_drift", "other"):
+        items = by_cat.get(cat, [])
+        if items:
+            parts.append(
+                f"<p>{CATEGORY_LABELS[cat].capitalize()} ({len(items)}). "
+                + " ".join(f"<code>{e(d['dataset_id'])}</code>: {e(d['reason'])}." for d in items)
+                + "</p>"
+            )
+    if real and not by_cat.get("version_drift"):
+        parts.append(
+            f"<p>None of the {_plural(len(real), 'disagreement')} comes from the two tools following "
+            "different versions of the specification.</p>"
+        )
+    out += [p for p in parts if p]
+
+    cc = vx["category_counts"]
+    dirs = [k for k in ("only_neurolake", "only_validator", "validator_not_assessed") if k in cc]
+    dir_label = {
+        "only_neurolake": "Only neurolake",
+        "only_validator": "Only validator",
+        "validator_not_assessed": "Validator could not assess",
+    }
+    head = "".join(f'<th class="num">{dir_label[k]}</th>' for k in dirs)
+    body = "".join(
+        f"<tr><td>{e(CATEGORY_LABELS[cat])}</td>"
+        + "".join(f'<td class="num">{cc[k].get(cat, 0)}</td>' for k in dirs)
+        + "</tr>"
+        for cat in CATEGORY_LABELS
+        if any(cc[k].get(cat, 0) for k in dirs)
+    )
+    drows = "".join(
+        f"<tr><td><code>{e(d['dataset_id'])}</code></td><td>{e(CHECK_LABELS.get(d['check'], d['check']))}</td>"
+        f"<td>{e(dir_label[d['direction']])}</td><td>{e(CATEGORY_LABELS[d['category']])}</td>"
+        f"<td>{e(d['reason'])}</td></tr>"
+        for d in dis
+    )
+    out += [
+        "<details><summary>Every disagreement and its class</summary>"
+        '<div class="table-wrap"><table><thead><tr><th>Class</th>'
+        f"{head}</tr></thead><tbody>{body}</tbody></table></div>"
+        '<div class="table-wrap"><table><thead><tr><th>Dataset</th><th>Check</th><th>Direction</th>'
+        f"<th>Class</th><th>Why</th></tr></thead><tbody>{drows}</tbody></table></div></details>",
+    ]
+
+    hc = vx.get("hand_checked") or []
+    if hc:
+        n_dir = {k: sum(h["direction"] == k for h in hc) for k in dir_label}
+        avail = {k: sum(d["direction"] == k for d in dis) for k in dir_label}
+        hc_rows = "".join(
+            f"<li><code>{e(h['dataset_id'])}</code> ({e(CHECK_LABELS.get(h['check'], h['check']))}): "
+            f"{e(h['note'])}.</li>"
+            for h in hc
+        )
+        out.append(
+            f"<details><summary>Checked by hand against the raw files ({len(hc)})</summary>"
+            f"<p>{n_dir['only_neurolake']} of the {avail['only_neurolake']} neurolake-only and "
+            f"{n_dir['only_validator']} of the {avail['only_validator']} validator-only disagreements "
+            f"were opened in the cloned snapshots.</p><ul>{hc_rows}</ul></details>"
+        )
+
+    no_eq = vx["neurolake_rules_without_validator_equivalent"]
+    v_only = vx["validator_errors_without_neurolake_rule"]
+    out += [
+        "<p>Outside the paired checks the two tools look at different things. "
+        f"{_plural(len(no_eq), 'neurolake rule')} with findings here "
+        f"{'has' if len(no_eq) == 1 else 'have'} no validator counterpart: "
+        + ", ".join(
+            f"{e(LABELS.get(r['rule_id'], r['rule_id']))} ({_plural(r['datasets'], 'dataset')})"
+            for r in no_eq
+        )
+        + ". "
+        + (
+            f"In the other direction, the validator raised {_plural(len(v_only), 'kind')} of error with no "
+            "neurolake rule, most often "
+            + ", ".join(
+                f"<code>{e(x['key'].split('/')[0])}</code>"
+                + (" other than a missing required field" if x["key"].endswith("/other") else "")
+                + f" ({_plural(x['datasets'], 'dataset')})"
+                for x in v_only[:4]
+            )
+            + ". neurolake has no rule for any of these.</p>"
+            if v_only
+            else "The validator raised no error outside the paired checks.</p>"
+        ),
+        "</section>",
+    ]
+    return out
+
+
+def build(f: dict, hx: dict | None = None, vx: dict | None = None) -> str:
     from neurolake.fixtures import MUST_NOT_FLAG
 
     s = f["sample"][0]
@@ -578,6 +795,7 @@ def build(f: dict, hx: dict | None = None) -> str:
         "</figure>",
         "</section>",
         *(history_section(hx) if hx else []),
+        *(validator_section(vx) if vx else []),
         "<section>",
         "<h2>How this was done</h2>",
         "<ul>",
@@ -626,6 +844,7 @@ def build(f: dict, hx: dict | None = None) -> str:
         "python audit/analyze.py data/audit\n"
         "python audit/render.py"
         + ("\nmake history   # first vs latest snapshots" if hx else "")
+        + ("\nmake validator-run validator   # cross-check with bids-validator" if vx else "")
         + "</code></pre>",
         "<p>Code, rules and tests: "
         '<a href="https://github.com/pearlfranz20/neurolake">github.com/pearlfranz20/neurolake</a>.</p>',
@@ -633,6 +852,7 @@ def build(f: dict, hx: dict | None = None) -> str:
         "<footer>By Pearl Franz. Data from OpenNeuro (openneuro.org) via the OpenNeuroDatasets mirrors. "
         'Every chart and count on this page is generated from <span class="mono">audit/findings.json</span>'
         + (' and <span class="mono">audit/history.json</span>' if hx else "")
+        + (' and <span class="mono">audit/validator_comparison.json</span>' if vx else "")
         + ".</footer>",
         "</main>",
         f"<script>{JS}</script>",
@@ -641,11 +861,15 @@ def build(f: dict, hx: dict | None = None) -> str:
 
 
 def main(
-    findings: str = "audit/findings.json", out_dir: str = "docs", history: str = "audit/history.json"
+    findings: str = "audit/findings.json",
+    out_dir: str = "docs",
+    history: str = "audit/history.json",
+    validator: str = "audit/validator_comparison.json",
 ) -> None:
     f = json.loads(Path(findings).read_text())
     hx = json.loads(Path(history).read_text()) if Path(history).exists() else None
-    body = build(f, hx)
+    vx = json.loads(Path(validator).read_text()) if Path(validator).exists() else None
+    body = build(f, hx, vx)
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     (out / "openneuro-audit.fragment.html").write_text(body, encoding="utf-8")

@@ -2,7 +2,7 @@ LAKE ?= data/lake
 DATASETS ?= ds000001 ds000117 ds002718
 DATASETS_LAKE ?= data/history/latest/neurolake.duckdb
 
-.PHONY: install demo openneuro audit history datasets datasets-export transform report test lint docs airflow clean
+.PHONY: install demo openneuro audit history datasets datasets-export validator validator-run transform report test lint docs airflow clean
 
 install:            ## editable install with dev tools
 	pip install -e ".[dev]"
@@ -35,6 +35,17 @@ datasets:           ## per-dataset pages in docs/datasets, from the committed au
 datasets-export:    ## re-export audit/datasets.json from the lake, then render (run after `make history`)
 	python audit/datasets.py export $(DATASETS_LAKE)
 	python audit/datasets.py render
+
+VALIDATOR_PREFIX ?= data/validator
+
+validator-run:      ## run bids-validator 1.15.0 on every latest snapshot (network, npm; after `make history`)
+	npm install --prefix $(VALIDATOR_PREFIX) --no-audit --no-fund bids-validator@1.15.0
+	python audit/validator.py run audit/history_pairs.csv data/history/latest $(VALIDATOR_PREFIX)/node_modules/.bin/bids-validator
+	python audit/validator.py probe $(VALIDATOR_PREFIX)/node_modules/.bin/bids-validator
+
+validator:          ## compare the committed validator output with the latest lake, then render
+	python audit/validator.py compare data/history/latest
+	python audit/render.py
 
 transform:
 	neurolake transform --lake $(LAKE)

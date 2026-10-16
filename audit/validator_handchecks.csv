@@ -1,0 +1,8 @@
+dataset_id,check,direction,note
+ds004226,participants_vs_data,only_neurolake,"participants.tsv lists sub-1, sub-2, sub-3... while the folders are sub-001, sub-002, sub-003...: the two sides never match"
+ds006318,participants_vs_data,only_neurolake,"sub-028 is listed in participants.tsv but its folder holds only JPEG images under sub-028/derivatives/, no BIDS data file"
+ds002338,participants_vs_data,only_neurolake,"participants.tsv lists sub-xp208, sub-xp209, sub-xp212, sub-xp214 and none of them has a folder"
+ds004348,required_sidecar_field,only_neurolake,"sub-001 and sub-005 each have a task-wake_eeg.set with no eeg.json at any level (only task-sleep has one), so TaskName, SamplingFrequency and the other REQUIRED fields are undefined"
+ds006833,intended_for,only_neurolake,"sub-01_ses-02_fieldmap.json contains the key IntendedFor twice: first six ses-01/func targets that do not exist, then six ses-02/func targets that do"
+ds002841,tsv_row_length,only_validator,"Row 36 of the root task-masstask_run-01_events.tsv ends with a tab, giving 4 columns under a 3-column header. neurolake does not parse events files"
+ds006833,description_missing,only_validator,"dataset_description.json exists with Name and BIDSVersion. The .bidsignore line **/*dat* matches it, which validator 1.15 honours"
