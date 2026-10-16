@@ -1,0 +1,1241 @@
+{
+  "sample": {
+    "datasets": 150,
+    "multi_snapshot": 88,
+    "cohort": 88,
+    "median_years_between": 0.4,
+    "earliest_first": "2018-09-19",
+    "latest_latest": "2026-10-10"
+  },
+  "status": [
+    {
+      "side": "first",
+      "status": "clean",
+      "datasets": 47
+    },
+    {
+      "side": "first",
+      "status": "errors",
+      "datasets": 7
+    },
+    {
+      "side": "first",
+      "status": "warnings only",
+      "datasets": 34
+    },
+    {
+      "side": "latest",
+      "status": "clean",
+      "datasets": 51
+    },
+    {
+      "side": "latest",
+      "status": "errors",
+      "datasets": 7
+    },
+    {
+      "side": "latest",
+      "status": "warnings only",
+      "datasets": 30
+    }
+  ],
+  "transitions": {
+    "errors_fixed": 1,
+    "errors_introduced": 1,
+    "errors_persist": 6,
+    "fewer_issues": 8,
+    "more_issues": 5,
+    "same_issues": 75
+  },
+  "changed": [
+    {
+      "dataset_id": "ds003768",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.13",
+      "first_scans": 543,
+      "latest_scans": 543,
+      "data_grew": false,
+      "resolved": 1275,
+      "introduced": 0,
+      "resolved_objects": 255,
+      "resolved_rules": [
+        "missing_required_sidecar_field"
+      ],
+      "introduced_rules": null
+    },
+    {
+      "dataset_id": "ds003012",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.4",
+      "first_scans": 4,
+      "latest_scans": 116,
+      "data_grew": true,
+      "resolved": 28,
+      "introduced": 28,
+      "resolved_objects": 28,
+      "resolved_rules": [
+        "participant_without_data"
+      ],
+      "introduced_rules": [
+        "missing_recommended_sidecar_field"
+      ]
+    },
+    {
+      "dataset_id": "ds005810",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "2.0.0",
+      "first_scans": 32,
+      "latest_scans": 335,
+      "data_grew": true,
+      "resolved": 27,
+      "introduced": 0,
+      "resolved_objects": 27,
+      "resolved_rules": [
+        "participant_without_data"
+      ],
+      "introduced_rules": null
+    },
+    {
+      "dataset_id": "ds004350",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "2.0.0",
+      "first_scans": 238,
+      "latest_scans": 240,
+      "data_grew": false,
+      "resolved": 3,
+      "introduced": 0,
+      "resolved_objects": 3,
+      "resolved_rules": [
+        "inconsistent_sampling_frequency"
+      ],
+      "introduced_rules": null
+    },
+    {
+      "dataset_id": "ds005003",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "2.0.0",
+      "first_scans": 217,
+      "latest_scans": 222,
+      "data_grew": false,
+      "resolved": 3,
+      "introduced": 4,
+      "resolved_objects": 3,
+      "resolved_rules": [
+        "inconsistent_repetition_time"
+      ],
+      "introduced_rules": [
+        "bidsignore_matches_core_files",
+        "inconsistent_repetition_time"
+      ]
+    },
+    {
+      "dataset_id": "ds002338",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "2.0.2",
+      "first_scans": 176,
+      "latest_scans": 187,
+      "data_grew": false,
+      "resolved": 1,
+      "introduced": 0,
+      "resolved_objects": 1,
+      "resolved_rules": [
+        "participant_without_data"
+      ],
+      "introduced_rules": null
+    },
+    {
+      "dataset_id": "ds003507",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_scans": 126,
+      "latest_scans": 126,
+      "data_grew": false,
+      "resolved": 1,
+      "introduced": 0,
+      "resolved_objects": 1,
+      "resolved_rules": [
+        "missing_participants_tsv"
+      ],
+      "introduced_rules": null
+    },
+    {
+      "dataset_id": "ds004103",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.4",
+      "first_scans": 330,
+      "latest_scans": 0,
+      "data_grew": false,
+      "resolved": 1,
+      "introduced": 2,
+      "resolved_objects": 1,
+      "resolved_rules": [
+        "missing_participants_tsv"
+      ],
+      "introduced_rules": [
+        "bidsignore_hides_all_data",
+        "bidsignore_matches_core_files"
+      ]
+    },
+    {
+      "dataset_id": "ds004228",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_scans": 2,
+      "latest_scans": 140,
+      "data_grew": true,
+      "resolved": 1,
+      "introduced": 0,
+      "resolved_objects": 1,
+      "resolved_rules": [
+        "missing_recommended_sidecar_field"
+      ],
+      "introduced_rules": null
+    },
+    {
+      "dataset_id": "ds004902",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.8",
+      "first_scans": 211,
+      "latest_scans": 218,
+      "data_grew": false,
+      "resolved": 1,
+      "introduced": 1,
+      "resolved_objects": 1,
+      "resolved_rules": [
+        "inconsistent_sampling_frequency"
+      ],
+      "introduced_rules": [
+        "inconsistent_sampling_frequency"
+      ]
+    },
+    {
+      "dataset_id": "ds005047",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.7",
+      "first_scans": 839,
+      "latest_scans": 840,
+      "data_grew": false,
+      "resolved": 1,
+      "introduced": 0,
+      "resolved_objects": 1,
+      "resolved_rules": [
+        "scans_tsv_missing_file"
+      ],
+      "introduced_rules": null
+    },
+    {
+      "dataset_id": "ds005498",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "2.0.0",
+      "first_scans": 1735,
+      "latest_scans": 1735,
+      "data_grew": false,
+      "resolved": 1,
+      "introduced": 0,
+      "resolved_objects": 1,
+      "resolved_rules": [
+        "missing_participants_tsv"
+      ],
+      "introduced_rules": null
+    },
+    {
+      "dataset_id": "ds005697",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.2",
+      "first_scans": 49,
+      "latest_scans": 51,
+      "data_grew": false,
+      "resolved": 1,
+      "introduced": 6,
+      "resolved_objects": 1,
+      "resolved_rules": [
+        "participant_without_data"
+      ],
+      "introduced_rules": [
+        "missing_required_sidecar_field",
+        "subject_missing_from_participants"
+      ]
+    },
+    {
+      "dataset_id": "ds006948",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_scans": 75,
+      "latest_scans": 1047,
+      "data_grew": true,
+      "resolved": 1,
+      "introduced": 1,
+      "resolved_objects": 1,
+      "resolved_rules": [
+        "missing_participants_tsv"
+      ],
+      "introduced_rules": [
+        "inconsistent_repetition_time"
+      ]
+    },
+    {
+      "dataset_id": "ds001619",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_scans": 216,
+      "latest_scans": 132,
+      "data_grew": false,
+      "resolved": 0,
+      "introduced": 7,
+      "resolved_objects": 0,
+      "resolved_rules": null,
+      "introduced_rules": [
+        "participant_without_data"
+      ]
+    },
+    {
+      "dataset_id": "ds004302",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_scans": 141,
+      "latest_scans": 142,
+      "data_grew": false,
+      "resolved": 0,
+      "introduced": 1,
+      "resolved_objects": 0,
+      "resolved_rules": null,
+      "introduced_rules": [
+        "missing_recommended_sidecar_field"
+      ]
+    }
+  ],
+  "changed_summary": {
+    "datasets": 16,
+    "data_grew": 4,
+    "only_resolved": 8,
+    "only_introduced": 2,
+    "both": 6,
+    "max_resolved_one_dataset": 1275,
+    "top_resolver": "ds003768",
+    "resolved": 1345,
+    "introduced": 50
+  },
+  "issue_fates": [
+    {
+      "fate": "introduced",
+      "issues": 50,
+      "datasets": 8
+    },
+    {
+      "fate": "persisting",
+      "issues": 632,
+      "datasets": 33
+    },
+    {
+      "fate": "resolved",
+      "issues": 1345,
+      "datasets": 14
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "missing_participants_tsv",
+      "datasets_first": 17,
+      "datasets_latest": 13,
+      "cleared": 4,
+      "appeared": 0
+    },
+    {
+      "rule_id": "missing_recommended_sidecar_field",
+      "datasets_first": 14,
+      "datasets_latest": 13,
+      "cleared": 1,
+      "appeared": 0
+    },
+    {
+      "rule_id": "participant_without_data",
+      "datasets_first": 11,
+      "datasets_latest": 8,
+      "cleared": 3,
+      "appeared": 0
+    },
+    {
+      "rule_id": "inconsistent_repetition_time",
+      "datasets_first": 3,
+      "datasets_latest": 4,
+      "cleared": 0,
+      "appeared": 1
+    },
+    {
+      "rule_id": "inconsistent_sampling_frequency",
+      "datasets_first": 3,
+      "datasets_latest": 2,
+      "cleared": 1,
+      "appeared": 0
+    },
+    {
+      "rule_id": "participant_id_without_prefix",
+      "datasets_first": 3,
+      "datasets_latest": 3,
+      "cleared": 0,
+      "appeared": 0
+    },
+    {
+      "rule_id": "bidsignore_matches_core_files",
+      "datasets_first": 2,
+      "datasets_latest": 4,
+      "cleared": 0,
+      "appeared": 2
+    },
+    {
+      "rule_id": "missing_required_sidecar_field",
+      "datasets_first": 2,
+      "datasets_latest": 2,
+      "cleared": 1,
+      "appeared": 1
+    },
+    {
+      "rule_id": "scans_tsv_missing_file",
+      "datasets_first": 2,
+      "datasets_latest": 1,
+      "cleared": 1,
+      "appeared": 0
+    },
+    {
+      "rule_id": "ambiguous_sidecar_inheritance",
+      "datasets_first": 1,
+      "datasets_latest": 1,
+      "cleared": 0,
+      "appeared": 0
+    },
+    {
+      "rule_id": "duplicate_participant_id",
+      "datasets_first": 1,
+      "datasets_latest": 1,
+      "cleared": 0,
+      "appeared": 0
+    },
+    {
+      "rule_id": "fieldmap_intended_for_missing_target",
+      "datasets_first": 1,
+      "datasets_latest": 1,
+      "cleared": 0,
+      "appeared": 0
+    },
+    {
+      "rule_id": "malformed_tsv_row",
+      "datasets_first": 1,
+      "datasets_latest": 1,
+      "cleared": 0,
+      "appeared": 0
+    },
+    {
+      "rule_id": "subject_missing_from_participants",
+      "datasets_first": 1,
+      "datasets_latest": 2,
+      "cleared": 0,
+      "appeared": 1
+    },
+    {
+      "rule_id": "bidsignore_hides_all_data",
+      "datasets_first": 0,
+      "datasets_latest": 1,
+      "cleared": 0,
+      "appeared": 1
+    }
+  ],
+  "sign_test": {
+    "fewer": 8,
+    "more": 5,
+    "p_two_sided": 0.5811
+  },
+  "datasets": [
+    {
+      "dataset_id": "ds001517",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.3",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 24,
+      "latest_warnings": 24
+    },
+    {
+      "dataset_id": "ds001541",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.1.3",
+      "first_errors": 2,
+      "latest_errors": 2,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds001547",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.1.0",
+      "first_errors": 1,
+      "latest_errors": 1,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds001619",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 2,
+      "latest_warnings": 9
+    },
+    {
+      "dataset_id": "ds001652",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "2.0.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds001762",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 32,
+      "latest_warnings": 32
+    },
+    {
+      "dataset_id": "ds001775",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 25,
+      "latest_warnings": 25
+    },
+    {
+      "dataset_id": "ds001838",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 1,
+      "latest_errors": 1,
+      "first_warnings": 16,
+      "latest_warnings": 16
+    },
+    {
+      "dataset_id": "ds002338",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "2.0.2",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 7,
+      "latest_warnings": 6
+    },
+    {
+      "dataset_id": "ds002411",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.1.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds002419",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.3",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds002425",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.2",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 6,
+      "latest_warnings": 6
+    },
+    {
+      "dataset_id": "ds002814",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.3.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds002841",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 30,
+      "latest_warnings": 30
+    },
+    {
+      "dataset_id": "ds003012",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.4",
+      "first_errors": 1,
+      "latest_errors": 1,
+      "first_warnings": 29,
+      "latest_warnings": 29
+    },
+    {
+      "dataset_id": "ds003374",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.1.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds003499",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds003507",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 22,
+      "latest_warnings": 21
+    },
+    {
+      "dataset_id": "ds003509",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.1.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds003604",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.7",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds003758",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.2",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds003768",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.13",
+      "first_errors": 1275,
+      "latest_errors": 0,
+      "first_warnings": 1,
+      "latest_warnings": 1
+    },
+    {
+      "dataset_id": "ds003772",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds003812",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "2.0.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds003838",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.6",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds003849",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 1,
+      "latest_warnings": 1
+    },
+    {
+      "dataset_id": "ds003974",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "3.0.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 1,
+      "latest_warnings": 1
+    },
+    {
+      "dataset_id": "ds004021",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds004042",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 20,
+      "latest_warnings": 20
+    },
+    {
+      "dataset_id": "ds004056",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.2",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds004103",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.4",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 1,
+      "latest_warnings": 2
+    },
+    {
+      "dataset_id": "ds004141",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.5",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds004199",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.6",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds004228",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 2,
+      "latest_warnings": 1
+    },
+    {
+      "dataset_id": "ds004279",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.1.2",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds004302",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 70,
+      "latest_warnings": 71
+    },
+    {
+      "dataset_id": "ds004348",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.5",
+      "first_errors": 45,
+      "latest_errors": 45,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds004350",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "2.0.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 3,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds004446",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds004532",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.2.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds004597",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "2.0.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds004620",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 8,
+      "latest_warnings": 8
+    },
+    {
+      "dataset_id": "ds004670",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.1.3",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 8,
+      "latest_warnings": 8
+    },
+    {
+      "dataset_id": "ds004696",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds004745",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds004783",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds004830",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "2.0.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds004848",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds004851",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "2.1.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds004902",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.8",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 1,
+      "latest_warnings": 1
+    },
+    {
+      "dataset_id": "ds004974",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.2",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds005003",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "2.0.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 5,
+      "latest_warnings": 6
+    },
+    {
+      "dataset_id": "ds005047",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.7",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 1,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds005059",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.6",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 5,
+      "latest_warnings": 5
+    },
+    {
+      "dataset_id": "ds005095",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.2",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds005216",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.1.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds005342",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.3",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds005357",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 1,
+      "latest_warnings": 1
+    },
+    {
+      "dataset_id": "ds005366",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "2.0.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 9,
+      "latest_warnings": 9
+    },
+    {
+      "dataset_id": "ds005385",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.3",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds005498",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "2.0.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 1,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds005510",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds005565",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.3",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds005635",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds005642",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds005664",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.1.2",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds005697",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.2",
+      "first_errors": 0,
+      "latest_errors": 5,
+      "first_warnings": 1,
+      "latest_warnings": 1
+    },
+    {
+      "dataset_id": "ds005777",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds005810",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "2.0.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 27,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds005863",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "2.0.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds005868",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds005873",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.1.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds006036",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.6",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds006040",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.2",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 1,
+      "latest_warnings": 1
+    },
+    {
+      "dataset_id": "ds006260",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds006318",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "2.0.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 86,
+      "latest_warnings": 86
+    },
+    {
+      "dataset_id": "ds006366",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds006370",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds006373",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.1.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 11,
+      "latest_warnings": 11
+    },
+    {
+      "dataset_id": "ds006566",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.2",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 40,
+      "latest_warnings": 40
+    },
+    {
+      "dataset_id": "ds006833",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.3",
+      "first_errors": 32,
+      "latest_errors": 32,
+      "first_warnings": 2,
+      "latest_warnings": 2
+    },
+    {
+      "dataset_id": "ds006893",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.3",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds006948",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 1,
+      "latest_warnings": 1
+    },
+    {
+      "dataset_id": "ds007276",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.2.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 1,
+      "latest_warnings": 1
+    },
+    {
+      "dataset_id": "ds007427",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.2",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 94,
+      "latest_warnings": 94
+    },
+    {
+      "dataset_id": "ds007446",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.1.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    },
+    {
+      "dataset_id": "ds007468",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.1.0",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 25,
+      "latest_warnings": 25
+    },
+    {
+      "dataset_id": "ds007477",
+      "first_snapshot": "1.0.0",
+      "latest_snapshot": "1.0.1",
+      "first_errors": 0,
+      "latest_errors": 0,
+      "first_warnings": 0,
+      "latest_warnings": 0
+    }
+  ]
+}

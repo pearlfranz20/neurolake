@@ -82,7 +82,7 @@ def ingest(pairs_csv: str = "audit/history_pairs.csv", root: str = "data/history
 
 # Per dataset and side: snapshot, type, and error/warning counts.
 _PER_DATASET = """
-    select d.dataset_id, d.snapshot, d.snapshot_created_at, d.dataset_type,
+    select d.dataset_id, d.snapshot, d.snapshot_created_at, d.dataset_type, d.n_scans,
            count(i.issue_id) filter (where i.severity = 'error') as errors,
            count(i.issue_id) filter (where i.severity = 'warning') as warnings
     from {side}.marts.dim_dataset d
@@ -91,7 +91,7 @@ _PER_DATASET = """
 """
 
 _ISSUES = """
-    select dataset_id, issue_id, rule_id, severity
+    select dataset_id, issue_id, rule_id, severity, object_id
     from {side}.marts.fct_dq_issue
     where severity in ('error', 'warning')
 """
@@ -111,7 +111,8 @@ def analyze(root: str = "data/history", out: str = "audit/history.json") -> dict
                f.snapshot as first_snapshot, l.snapshot as latest_snapshot,
                f.snapshot_created_at as first_at, l.snapshot_created_at as latest_at,
                f.errors as first_errors, l.errors as latest_errors,
-               f.warnings as first_warnings, l.warnings as latest_warnings
+               f.warnings as first_warnings, l.warnings as latest_warnings,
+               f.n_scans as first_scans, l.n_scans as latest_scans
         from ds_first f join ds_latest l using (dataset_id)
         where f.snapshot <> l.snapshot
           and f.dataset_type <> 'derivative' and l.dataset_type <> 'derivative'
@@ -166,12 +167,44 @@ def analyze(root: str = "data/history", out: str = "audit/history.json") -> dict
         create temp table matched as
         select coalesce(f.dataset_id, l.dataset_id) as dataset_id,
                coalesce(f.rule_id, l.rule_id) as rule_id,
+               coalesce(f.object_id, l.object_id) as object_id,
                case when l.issue_id is null then 'resolved'
                     when f.issue_id is null then 'introduced' else 'persisting' end as fate
         from (select * from iss_first where dataset_id in (select dataset_id from cohort)) f
         full outer join (select * from iss_latest where dataset_id in (select dataset_id from cohort)) l
           on f.dataset_id = l.dataset_id and f.issue_id = l.issue_id
     """)
+    # Datasets whose findings changed at all, and why: an update that adds most of the
+    # data (an unfinished first upload) clears "participant has no data" without any
+    # metadata being fixed, so data growth is reported next to every change.
+    con.execute("""
+        create temp table changed as
+        select c.dataset_id, c.first_snapshot, c.latest_snapshot, c.first_scans, c.latest_scans,
+               coalesce(c.latest_scans >= 1.5 * c.first_scans, false) as data_grew,
+               count(*) filter (where m.fate = 'resolved') as resolved,
+               count(*) filter (where m.fate = 'introduced') as introduced,
+               count(distinct m.object_id) filter (where m.fate = 'resolved') as resolved_objects,
+               list(distinct m.rule_id order by m.rule_id) filter (where m.fate = 'resolved')
+                   as resolved_rules,
+               list(distinct m.rule_id order by m.rule_id) filter (where m.fate = 'introduced')
+                   as introduced_rules
+        from cohort c join matched m using (dataset_id)
+        group by all
+        having count(*) filter (where m.fate <> 'persisting') > 0
+    """)
+    result["changed"] = q("select * from changed order by resolved desc, dataset_id")
+    result["changed_summary"] = q("""
+        select count(*) as datasets,
+               count(*) filter (where data_grew) as data_grew,
+               count(*) filter (where resolved > 0 and introduced = 0) as only_resolved,
+               count(*) filter (where introduced > 0 and resolved = 0) as only_introduced,
+               count(*) filter (where resolved > 0 and introduced > 0) as both,
+               max(resolved) as max_resolved_one_dataset,
+               arg_max(dataset_id, resolved) as top_resolver,
+               sum(resolved) as resolved, sum(introduced) as introduced
+        from changed
+    """)[0]
+
     result["issue_fates"] = q("""
         select fate, count(*) as issues, count(distinct dataset_id) as datasets
         from matched group by fate order by fate

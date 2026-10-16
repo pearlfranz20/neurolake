@@ -303,18 +303,6 @@
       "files": 711
     },
     {
-      "field": "SamplingFrequency (REQUIRED)",
-      "severity": "error",
-      "datasets": 4,
-      "files": 226
-    },
-    {
-      "field": "TaskName (REQUIRED)",
-      "severity": "error",
-      "datasets": 4,
-      "files": 226
-    },
-    {
       "field": "SoftwareFilters (REQUIRED)",
       "severity": "error",
       "datasets": 4,
@@ -322,6 +310,18 @@
     },
     {
       "field": "PowerLineFrequency (REQUIRED)",
+      "severity": "error",
+      "datasets": 4,
+      "files": 226
+    },
+    {
+      "field": "SamplingFrequency (REQUIRED)",
+      "severity": "error",
+      "datasets": 4,
+      "files": 226
+    },
+    {
+      "field": "TaskName (REQUIRED)",
       "severity": "error",
       "datasets": 4,
       "files": 226
@@ -719,9 +719,9 @@
       "issues": 2
     },
     {
-      "dataset_id": "ds003012",
+      "dataset_id": "ds001547",
       "rules": [
-        "malformed_tsv_row"
+        "participant_id_without_prefix"
       ],
       "issues": 1
     },
@@ -733,9 +733,9 @@
       "issues": 1
     },
     {
-      "dataset_id": "ds001547",
+      "dataset_id": "ds003012",
       "rules": [
-        "participant_id_without_prefix"
+        "malformed_tsv_row"
       ],
       "issues": 1
     },

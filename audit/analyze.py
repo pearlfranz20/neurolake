@@ -133,7 +133,7 @@ ID_MISMATCH = """
 EXTRA = {
     "error_datasets": """
         select dataset_id, list(distinct rule_id order by rule_id) as rules, count(*) as issues
-        from marts.fct_dq_issue where severity = 'error' group by 1 order by issues desc
+        from marts.fct_dq_issue where severity = 'error' group by 1 order by issues desc, dataset_id
     """,
     "recent_vs_older": """
         with per as (

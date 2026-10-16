@@ -239,7 +239,87 @@ def rules_table(rules) -> str:
     )
 
 
-def build(f: dict) -> str:
+def _status(errors: int, warnings: int) -> str:
+    return "errors" if errors else ("warnings only" if warnings else "clean")
+
+
+def history_section(hx: dict) -> list[str]:
+    """Do datasets get cleaner after first publication? From audit/history.json."""
+    s = hx["sample"]
+    n = s["cohort"]
+    t = hx["transitions"]
+    cs = hx["changed_summary"]
+    st = {(r["side"], r["status"]): r["datasets"] for r in hx["status"]}
+    changed = {c["dataset_id"]: c for c in hx["changed"]}
+    top = changed[cs["top_resolver"]]
+    states = ("clean", "warnings only", "errors")
+    grid = {(a, b): 0 for a in states for b in states}
+    for d in hx["datasets"]:
+        grid[
+            (
+                _status(d["first_errors"], d["first_warnings"]),
+                _status(d["latest_errors"], d["latest_warnings"]),
+            )
+        ] += 1
+    head = "".join(f'<th class="num">{e(b)}</th>' for b in states)
+    body = "".join(
+        f"<tr><td>{e(a)}</td>" + "".join(f'<td class="num">{grid[(a, b)]}</td>' for b in states) + "</tr>"
+        for a in states
+    )
+    out = [
+        "<section>",
+        "<h2>Do datasets get cleaner after release?</h2>",
+        f"<p>The year comparison above uses each dataset's latest snapshot, which mixes when a dataset was "
+        f"published with how much it was revised. To separate the two I ran the same rules on the first "
+        f"published snapshot of every dataset in the sample. {s['multi_snapshot']} of the {s['datasets']} "
+        f"have been updated at least once, a median of {s['median_years_between']:g} years apart, and all "
+        f"{n} are raw datasets.</p>",
+        f"<p>Updates rarely touch the metadata. {t['same_issues']} of the {n} updated datasets have exactly "
+        f"as many findings in their latest snapshot as in their first, and only {cs['datasets']} changed at "
+        f"all. The share that is fully clean moves from {pct(st[('first', 'clean')], n)} to "
+        f"{pct(st[('latest', 'clean')], n)} ({st[('first', 'clean')]} to {st[('latest', 'clean')]}), and "
+        f"the number with errors is {st[('first', 'errors')]} at both ends: {t['errors_fixed']} fixed, "
+        f"{t['errors_introduced']} introduced. Datasets that ended with fewer findings outnumber those that "
+        f"ended with more, {t['fewer_issues']} to {t['more_issues']}, which is well within chance "
+        f"(sign test p = {hx['sign_test']['p_two_sided']:.2f}).</p>",
+        "<figure>",
+        '<div class="chart"><div class="table-wrap" style="margin-top:0"><table>'
+        f"<thead><tr><th>First snapshot</th>{head}</tr></thead><tbody>{body}</tbody></table></div></div>",
+        f"<figcaption>Status of the {n} updated datasets at their first snapshot (rows) and latest snapshot "
+        "(columns). The diagonal is datasets whose status did not change.</figcaption>",
+        "</figure>",
+        f"<p>Counting individual findings would tell a much rosier story: {fmt(cs['resolved'])} resolved "
+        f"against {cs['introduced']} introduced. But {fmt(top['resolved'])} of those come from one dataset, "
+        f"<code>{e(top['dataset_id'])}</code>, which shipped {top['resolved_objects']} EEG recordings without "
+        f"sidecars ({top['resolved'] // top['resolved_objects']} required fields each) and added task-level ones in {e(top['latest_snapshot'])}. Several other improvements are "
+        f"not metadata fixes either. In {cs['data_grew']} of the {cs['datasets']} changed datasets the latest "
+        "snapshot has at least half again as many data files as the first, so the update finished an "
+        "incomplete upload, and listed participants simply gained their data.</p>",
+    ]
+    regress = []
+    if "ds004103" in changed:
+        regress.append(
+            "<code>ds004103</code> added a bare <code>*</code> to its <code>.bidsignore</code> in "
+            f"{e(changed['ds004103']['latest_snapshot'])}, so every file in the current release is "
+            "hidden from validation"
+        )
+    if "ds001619" in changed:
+        c = changed["ds001619"]
+        regress.append(
+            f"<code>ds001619</code> removed {c['introduced']} subject folders in {e(c['latest_snapshot'])} "
+            "but kept them in <code>participants.tsv</code>"
+        )
+    if regress:
+        out.append(f"<p>Updates also break things. {'. '.join(regress)}.</p>")
+    out += [
+        "<p>The practical reading: problems present at first upload tend to stay, so the cheapest "
+        "place to catch them is before the first snapshot is published.</p>",
+        "</section>",
+    ]
+    return out
+
+
+def build(f: dict, hx: dict | None = None) -> str:
     from neurolake.fixtures import MUST_NOT_FLAG
 
     s = f["sample"][0]
@@ -431,6 +511,7 @@ def build(f: dict) -> str:
         "Each bar is labelled with the number of datasets in that year.</figcaption>",
         "</figure>",
         "</section>",
+        *(history_section(hx) if hx else []),
         "<section>",
         "<h2>How this was done</h2>",
         "<ul>",
@@ -458,7 +539,13 @@ def build(f: dict) -> str:
         "</ul>",
         '<div class="callout"><b>Limits</b>',
         f"<p>This covers {s['datasets']} of roughly {fmt(int(mirrors['ci95'][0]))} to "
-        f"{fmt(int(mirrors['ci95'][1]))} mirrored datasets, and only each one's latest snapshot. The rules "
+        f"{fmt(int(mirrors['ci95'][1]))} mirrored datasets"
+        + (
+            ", at their first and latest snapshots only, not every version in between. "
+            if hx
+            else ", and only each one's latest snapshot. "
+        )
+        + "The rules "
         "cover the metadata problems that most often break reuse, not the whole specification, so this "
         "complements the official validator rather than replacing it. Metadata stored in git-annex was not "
         "fetched, and the affected files are marked unknown rather than missing.</p></div>",
@@ -471,21 +558,28 @@ def build(f: dict) -> str:
         "neurolake ingest-mirror --from-file audit/sample_ids.txt --lake data/audit\n"
         "neurolake transform --lake data/audit\n"
         "python audit/analyze.py data/audit\n"
-        "python audit/render.py</code></pre>",
+        "python audit/render.py"
+        + ("\nmake history   # first vs latest snapshots" if hx else "")
+        + "</code></pre>",
         "<p>Code, rules and tests: "
         '<a href="https://github.com/pearlfranz20/neurolake">github.com/pearlfranz20/neurolake</a>.</p>',
         "</section>",
         "<footer>By Pearl Franz. Data from OpenNeuro (openneuro.org) via the OpenNeuroDatasets mirrors. "
-        'Every chart and count on this page is generated from <span class="mono">audit/findings.json</span>.</footer>',
+        'Every chart and count on this page is generated from <span class="mono">audit/findings.json</span>'
+        + (' and <span class="mono">audit/history.json</span>' if hx else "")
+        + ".</footer>",
         "</main>",
         f"<script>{JS}</script>",
     ]
     return "\n".join(out)
 
 
-def main(findings: str = "audit/findings.json", out_dir: str = "docs") -> None:
+def main(
+    findings: str = "audit/findings.json", out_dir: str = "docs", history: str = "audit/history.json"
+) -> None:
     f = json.loads(Path(findings).read_text())
-    body = build(f)
+    hx = json.loads(Path(history).read_text()) if Path(history).exists() else None
+    body = build(f, hx)
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     (out / "openneuro-audit.fragment.html").write_text(body, encoding="utf-8")
